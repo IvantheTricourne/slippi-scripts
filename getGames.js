@@ -573,7 +573,8 @@ function getGames() {
     // report/write highlights
     if (argv.highlight) {
         highlight.queue = shuffle(highlight.queue);
-        highlight.totalLengthSeconds = totalHighlightLength;
+        // @NOTE: some clips take longer to start playing, so a buffer is necessary
+        highlight.totalLengthSeconds = totalHighlightLength + highlight.queue.length * 10;
         fs.writeFileSync(highlightFileName, JSON.stringify(highlight));
         console.log(`**** Highlights ****`);
         console.log(`${noCombos / (filteredFiles - badFiles) * 100}% of games had no valid ${argv.highlightType}`);
