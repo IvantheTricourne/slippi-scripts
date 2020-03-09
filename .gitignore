@@ -1,0 +1,7 @@
+Contents/
+output/
+node_modules/
+Slippi
+Slippi-Test
+log.txt
+*.json
