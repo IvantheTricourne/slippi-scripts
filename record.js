@@ -1,17 +1,9 @@
+const { isWin, sleep, runCommand, kill } = require('./utils.js');
 const OBSWebSocket = require('obs-websocket-js'); // npm install obs-websocket-js
 const obs = new OBSWebSocket();
 const { exec, execSync } = require("child_process");
 const ora = require("ora");
 const path = require('path');
-
-////////////////////////////////////////////////////////////////////////////////
-// helpers
-////////////////////////////////////////////////////////////////////////////////
-
-// determine if os is windows
-var isWin = process.platform === "win32";
-// sleep promise
-const sleep = (s) => new Promise(resolve => setTimeout(resolve, s * 1000));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Config
@@ -42,8 +34,7 @@ const dolphinCommand = `Dolphin${cmdExtension} -i "${pathToReplayFile}" -e "${pa
 async function startOBSAndConnect() {
     // start/launch obs
     const obsSpinner = ora("Launching OBS and attempting to connect websocket...").start();
-    process.chdir(pathToOBS);
-    exec(obsCommand);
+    runCommand(obsCommand, pathToOBS);
     await sleep(5);
     // connect to running obs instance with websocket
     obs.connect({
@@ -83,9 +74,8 @@ async function startOBSAndConnect() {
 // record async function
 async function startDolphinAndRecord() {
     try {
-        // cd, then start dolphin
-        process.chdir(pathToDolphin);
-        exec(dolphinCommand);
+        // launch dolphin
+        runCommand(dolphinCommand, pathToDolphin);
         console.log(`Successfully launched Dolphin with ${path.basename(pathToReplayFile)}.`);
         await sleep(3); // toggle this one if comp is slow
         // start recording
