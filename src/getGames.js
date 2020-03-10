@@ -71,7 +71,7 @@ const argv = yargs
           alias: 'i',
           description: 'Slippi directory to use (relative to script)',
           type: 'string',
-          default: './Slippi'
+          default: '../Slippi'
       })
       .option('dolphin', {
           description: 'Set output filename for dolphin replay file',
@@ -478,6 +478,7 @@ function getGames() {
                     currSetLength = 0;
                     currSetGameCount = 0;
                     console.log("____________________________________________________________");
+                    console.log(`File: ${path.basename(file,'.slp')}`);
                     console.log(makeVersusString(currPlayers));
                     console.log("____________________________________________________________");
                 }

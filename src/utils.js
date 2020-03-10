@@ -16,20 +16,21 @@ function runCommand(cmdStr, path = null, includeLog = false) {
 		process.chdir(path);
 	}
 	exec(cmdStr, (error, stdout, stderr) => {
-		/*
-        if (error) {
-            console.log(`error: ${error.message}`);
-            return;
-        } */
-        if (stderr) {
-            console.log(`stderr: ${stderr}`);
-            return;
-        }
-        if (stdout && includeLog) {
-        	console.log(stdout);
-        	return;
-        }
-    });
+      if (includeLog) {
+          if (error) {
+              console.log(`error: ${error.message}`);
+              return;
+          }
+          if (stderr) {
+              console.log(`stderr: ${stderr}`);
+              return;
+          }
+          if (stdout) {
+        	    console.log(stdout);
+        	    return;
+          }
+      }
+  });
 }
 
 // kill command (os sensitive) by name of executable
@@ -50,7 +51,7 @@ function sec2time(timeInSeconds) {
         minutes = Math.floor(time / 60) % 60,
         seconds = Math.floor(time - minutes * 60),
         milliseconds = time.slice(-3);
-    return pad(hours, 2) + ':' + pad(minutes, 2) + ':' + pad(seconds, 2)
+    return pad(hours, 2) + ':' + pad(minutes, 2) + ':' + pad(seconds, 2);
 }
 
 // exports

@@ -1,0 +1,35 @@
+{
+    "name": "slippi-scripts",
+    "version": "1.0.0",
+    "description": "The CLI Slippi script to rule them all",
+    "main": "src/getGames.js",
+    "dependencies": {
+        "chalk": "^3.0.0",
+        "lodash": "^4.17.15",
+        "obs-websocket-js": "^4.0.1",
+        "ora": "^4.0.3",
+        "slp-parser-js": "^4.1.0",
+        "yargs": "^15.1.0"
+    },
+    "devDependencies": {},
+    "scripts": {
+        "play": "node src/playback play -c ../config.json",
+        "record": "node src/playback record -c ../config.json"
+        "test": "node src/getGames.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/IvantheTricourne/slippi-scripts.git"
+    },
+    "keywords": [
+        "Slippi",
+        "SSBM",
+        "JavaScript"
+    ],
+    "author": "Carl Factora",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/IvantheTricourne/slippi-scripts/issues"
+    },
+    "homepage": "https://github.com/IvantheTricourne/slippi-scripts#readme"
+}
