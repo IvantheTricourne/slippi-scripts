@@ -69,9 +69,9 @@ const argv = yargs
       // input/output options
       .option('dir', {
           alias: 'i',
-          description: 'Slippi directory to use (relative to script)',
+          description: 'Slippi directory to use',
           type: 'string',
-          default: '../Slippi'
+          default: './Slippi'
       })
       .option('dolphin', {
           description: 'Set output filename for dolphin replay file',
@@ -148,7 +148,7 @@ var minKills = argv.minKills;
 // anything else for character timestamping
 var timestampType = 0;
 // slippi directory
-const basePath = path.join(__dirname, argv.dir);
+const basePath = path.join(process.cwd(), argv.dir);
 // output
 if (!fs.existsSync("./output")) {
     fs.mkdirSync("./output");
