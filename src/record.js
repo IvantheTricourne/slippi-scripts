@@ -8,7 +8,8 @@ const path = require('path');
 ////////////////////////////////////////////////////////////////////////////////
 // Config
 ////////////////////////////////////////////////////////////////////////////////
-const config = require(process.argv[2]); // pass path to config file directly to script
+console.log(process.argv)
+const config = require(`${process.cwd()}/config.json`); // pass path to config file directly to script
 
 // obs config
 const pathToOBS = config["OBS"]; // set obs path (i.e., directory it's in)

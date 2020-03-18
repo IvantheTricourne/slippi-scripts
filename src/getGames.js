@@ -113,7 +113,7 @@ const argv = yargs
       .option('acceptable', {
           description: 'Set highlight reel non-killing combo damage minimum',
           type: 'number',
-          default: 80
+          default: 110
       })
       .option('highlightType', {
           description: 'Set highlight reel type',
@@ -553,14 +553,14 @@ function getGames() {
     // push the last set to timestamp file
     writeToTimestampFile(currTimestamp, currSetLength, currSetGameCount, currPlayers);
     // add total length to replay object (+ a 1 second buffer for each clip)
-    dolphin.totalLengthSeconds = totalVODLength + dolphin.queue.length;
+    dolphin.totalLengthSeconds = totalVODLength + dolphin.queue.length * 5;
     // write dolphin replay object
     fs.writeFileSync(dolphinOutputFileName, JSON.stringify(dolphin));
     console.log(`**** Summary ****`);
     console.log(`${badFiles} bad file(s) ignored`);
     console.log(`${numCPU} game(s) with CPUs removed`);
     console.log(`${dolphin.queue.length} game(s) found`);
-    console.log(`Approximate VOD length: ${sec2time(totalVODLength)}\n`);
+    console.log(`Approximate VOD length: ${sec2time(dolphin.totalLengthSeconds)}\n`);
     // report/write highlights
     if (argv.highlight) {
         highlight.queue = shuffle(highlight.queue);

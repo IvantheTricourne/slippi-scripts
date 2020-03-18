@@ -21,7 +21,7 @@ var chadCityGameState =
                'opponent': 1
              },
         // length of chad buffer (in frames)
-        'chadBuffer': 1800
+        'chadBuffer': 600
     };
 
 function resetChadState() {
@@ -48,9 +48,33 @@ function crowdGasp() {
     });
 }
 
+function patrickScream() {
+    player.play({
+        path: `${resourceDir}/patrick-scream.wav`,
+    }).catch((error) => {
+        console.error(error);
+    });
+}
+
 function crowdCheer() {
     player.play({
         path: `${resourceDir}/cheer.wav`,
+    }).catch((error) => {
+        console.error(error);
+    });
+}
+
+function planktonYes() {
+    player.play({
+        path: `${resourceDir}/come-to-papa.wav`,
+    }).catch((error) => {
+        console.error(error);
+    });
+}
+
+function finishHim() {
+    player.play({
+        path: `${resourceDir}/finish-him.wav`,
     }).catch((error) => {
         console.error(error);
     });
@@ -118,18 +142,16 @@ watcher.on('change', (path) => {
 
     // multispinner.spinners['frames']['text'] = `Frames: ${_.size(frames)}`;
     _.forEach(settings.players, player => {
+        let pIdx = player.port.toString();
         const frameData = _.get(latestFrame, ['players', player.playerIndex]);
         // @NOTE: FUCKING INDEXES!!!
-        const oppData = _.get(latestFrame, ['players', chadCityGameState[player.port.toString()].opponent - 1]);
+        const oppData = _.get(latestFrame, ['players', chadCityGameState[pIdx].opponent - 1]);
         if (!frameData && !oppData) {
-            if (!frameData) console.log('fuck');
-            if (!oppData) console.log('shit');
             return;
         }
 
         // maybe update chad scores
         let playerTaunted = playerIsTaunting(frameData),
-            pIdx = player.port.toString(),
             within = withinChadBuffer(frameData.post.frame, chadCityGameState[pIdx]['lastTaunt']),
             playerCurrStock = frameData.post.stocksRemaining;
         if (within) {
@@ -138,24 +160,26 @@ watcher.on('change', (path) => {
                 playerLastStock = chadCityGameState[pIdx].stocks;
 
             if (opponentCurrStock < opponentLastStock) {
+                planktonYes();
                 chadCityGameState[pIdx].points += (opponentLastStock - opponentCurrStock);
-                crowdCheer();
             }
             if (playerCurrStock < playerLastStock) {
+                patrickScream();
                 chadCityGameState[pIdx].points -= (playerLastStock - playerCurrStock);
-                crowdGasp();
             }
         }
 
         // update game state
-        if (playerTaunted) {
+        if (playerTaunted && !within) {
+            finishHim();
             chadCityGameState[pIdx]['lastTaunt'] = frameData.post.frame;
         }
         chadCityGameState[pIdx]['stocks'] = playerCurrStock;
         // update game view state
         multispinner.spinners[pIdx]['text'] =
-            `[Port ${player.port}] ${frameData.post.percent.toFixed(1)}% | ` +
-            `${frameData.post.stocksRemaining} stocks | ` +
+            `[Port ${player.port}] ` +
+            // `${frameData.post.percent.toFixed(1)}% | ` +
+            // `${frameData.post.stocksRemaining} stocks | ` +
             `${chadCityGameState[pIdx]['points']} chadPoints` +
             `${within ? ' <<CHAD MODE ENABLED>>':''}`;
     });

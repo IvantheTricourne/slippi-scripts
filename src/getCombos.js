@@ -4,7 +4,7 @@ const path = require('path');
 const slp = require('slp-parser-js');
 const SlippiGame = slp.default; // npm install slp-parser-js
 
-const basePath = path.join(__dirname, 'slp/'); // this var is "<directory your script is in>/slp"
+const basePath = path.join(process.cwd(), 'slp/'); // this var is "<directory your script is in>/slp"
 
 const outputFilename = "./combos.json";
 
