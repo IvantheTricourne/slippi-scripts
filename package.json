@@ -6,7 +6,7 @@
     "dependencies": {
         "chalk": "^3.0.0",
         "chokidar": "^3.3.1",
-        "lodash": "^4.17.15",
+        "lodash": "^4.17.19",
         "multispinner": "^0.2.1",
         "node-wav-player": "^0.1.0",
         "obs-websocket-js": "^4.0.1",
