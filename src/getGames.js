@@ -326,6 +326,7 @@ function makePlayerInfo(idx, settings, metadata) {
       	port: player.port,
         tag: player.nametag,
         netplayName: _.get(metadata, ["players", idx, "names", "netplay"], null) || "No Name",
+        rollbackCode: _.get(metadata, ["players", idx, "names", "code"], null) || "n/a",
       	characterName: slp.characters.getCharacterShortName(player.characterId),
       	color: slp.characters.getCharacterColorName(player.characterId, player.characterColor)
     };
@@ -354,17 +355,17 @@ function isSamePlayers(currPlayers, newPlayersInfo) {
 
 // make versus string from player infos
 function makeVersusStringPlayerInfo (playerInfo) {
-    var info = '';
-    if (playerInfo.tag !== '' && playerInfo.netplayName !== '') {
-        info = `${playerInfo.netplayName}/${playerInfo.tag} (P${playerInfo.port},${playerInfo.color} ${playerInfo.characterName})`;
-    } else if (playerInfo.tag !== '') {
-        info = `${playerInfo.tag} (P${playerInfo.port},${playerInfo.color} ${playerInfo.characterName})`;
-    } else if (playerInfo.netplayName !== '') {
-        info = `${playerInfo.netplayName} (P${playerInfo.port},${playerInfo.color} ${playerInfo.characterName})`;
-    } else {
-        info = `No Name (P${playerInfo.port},${playerInfo.color} ${playerInfo.characterName})`;
+    var info = [];
+    if (playerInfo.netplayName !== '') {
+        info.push(playerInfo.netplayName);
     }
-    return info;
+    if (playerInfo.rollbackCode !== '') {
+        info.push(playerInfo.rollbackCode);
+    }
+    if (playerInfo.tag !== '') {
+        info.push(playerInfo.tag);
+    }
+    return `${info.join('/')} (P${playerInfo.port},${playerInfo.color} ${playerInfo.characterName})`;
 }
 function makeVersusString(currPlayers) {
     if (currPlayers === null) {
