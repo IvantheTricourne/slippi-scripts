@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Element exposing (..)
@@ -8,6 +8,9 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
+import Json.Decode as D
+import Json.Encode as E
+
 
 -- model
 
@@ -70,21 +73,53 @@ inputElement msg modelField =
     , label = Input.labelHidden ""
     }
 
+-- ports
+
+port setStorage : E.Value -> Cmd msg
+
+updateWithStorage : Msg -> Model -> ( Model, Cmd Msg )
+updateWithStorage msg oldModel =
+  let
+    ( newModel, cmds ) = update msg oldModel
+    eModel = encode newModel
+  in
+  ( newModel
+  , Cmd.batch [ setStorage eModel
+              , cmds
+              ]
+  )
+
+-- codecs
+
+encode : Model -> E.Value
+encode model =
+  E.object
+    [ ("dir", E.string model.dir)
+    ]
+
+
+decoder : D.Decoder Model
+decoder =
+  D.map Model
+    (D.field "dir" D.string)
+
 -- subscriptions
 subscriptions : Model -> Sub Msg
 subscriptions _ = Sub.none
 
 -- main
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { dir = "" }
+init : E.Value -> ( Model, Cmd Msg )
+init flags =
+    ( case D.decodeValue decoder flags of
+          Ok model -> model
+          Err _ -> { dir = "" }
     , Cmd.none
     )
 
 main = Browser.element
        { init = init
-       , update = update
+       , update = updateWithStorage
        , view = view
        , subscriptions = subscriptions
        }
