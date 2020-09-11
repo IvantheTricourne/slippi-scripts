@@ -392,6 +392,8 @@ function writeToTimestampFile(currTimestamp, currSetLength, currSetGameCount, cu
     if (currSetGameCount !== 0) {
         console.log(`(${currSetGameCount} game(s) found: ${sec2time(currTimestamp)} - ${sec2time(currTimestamp + currSetLength)}, total: ${sec2time(currSetLength)})\n`);
         fs.appendFileSync(VODTimestampFileName, `${sec2time(currTimestamp)} ${makeVersusString(currPlayers)}\n`);
+    } else if (argv.list) {
+        return;
     } else {
         console.log('No timestamp generated. No games included!');
     }
@@ -483,9 +485,6 @@ function getGames() {
                         return;
                     }
                 }
-                // Get stats after filtering is done (bc it slows things down a lot)
-                // @TODO: determine player win counts
-                const stats = game.getStats();
                 // update player tracker info
                 let newPlayersInfo = {
                     player0: player0Info,
@@ -502,10 +501,16 @@ function getGames() {
                     currSetLength = 0;
                     currSetGameCount = 0;
                     console.log("____________________________________________________________");
-                    console.log(`File: ${path.basename(file,'.slp')}`);
                     console.log(makeVersusString(currPlayers));
                     console.log("____________________________________________________________");
                 }
+                // continue iff this isn't a printout only run
+                if (argv.list) {
+                    return;
+                }
+                // Get stats after filtering is done (bc it slows things down a lot)
+                // @TODO: determine player win counts
+                const stats = game.getStats();
                 // filter out short games (i.e., handwarmers) + not enough kills
                 let totalKills = 0;
                 _.each(stats.overall, (playerStats, i) => {
