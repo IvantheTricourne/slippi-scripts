@@ -4,7 +4,7 @@ const path = require('path');
 const slp = require('slp-parser-js');
 const SlippiGame = slp.default; // npm install slp-parser-js
 
-const basePath = path.join(process.cwd(), 'slp/'); // this var is "<directory your script is in>/slp"
+const basePath = path.join(process.cwd(), 'Slippi/'); // this var is "<directory your script is in>/slp"
 
 const outputFilename = "./combos.json";
 
@@ -20,10 +20,10 @@ const dolphin = {
 
 const fdCGers = [9, 12, 13, 22]; // Marth, Peach, Pikachu, and Doc
 
-const filterByNames = ["FoxInTheB0XX"]; // add names as strings to this array (checks both netplay name and nametags). `["Nikki", "Metonym", "metonym"]`
+const filterByNames = ["FoxInTheB0XX", "set!"]; // add names as strings to this array (checks both netplay name and nametags). `["Nikki", "Metonym", "metonym"]`
 const filterByCharacters = ["Fox"]; //add character names as strings. Use the regular or shortnames from here: https://github.com/project-slippi/slp-parser-js/blob/master/src/melee/characters.ts
 
-var minimumComboPercent = 40; // this decides the threshold for combos
+var minimumComboPercent = 30; // this decides the threshold for combos
 var originalMin = minimumComboPercent; // we use this to reset the threshold
 
 // Removal Statistics
@@ -116,7 +116,7 @@ function filterCombos(combos, settings, metadata) {
     if (wobbled) numWobbles++;
     if(chaingrab) numCG++;
     if (player.characterId === 15 && !threshold && (combo.endPercent - combo.startPercent) > originalMin) puffMiss++;
-    return !wobbled && !chaingrab && !largeSingleHit && (acceptable || (combo.didKill && threshold));
+    return !wobbled && !chaingrab && !largeSingleHit && (combo.didKill && threshold);
           
   });
 }
