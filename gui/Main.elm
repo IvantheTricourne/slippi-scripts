@@ -22,12 +22,17 @@ type alias Model =
 
 type Msg
     = DirChange String
+    | SearchDir
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         DirChange dir ->
             ( { model | dir = dir }
+            , Cmd.none
+            )
+        SearchDir ->
+            ( model
             , Cmd.none
             )
 
@@ -41,6 +46,7 @@ view model =
         , spacing 3
         ]
         [ inputElement DirChange model.dir
+        , btnElement "go" SearchDir
         ]
 
 -- elements
@@ -71,6 +77,28 @@ inputElement msg modelField =
     , text = modelField
     , placeholder = Nothing
     , label = Input.labelHidden ""
+    }
+
+btnElement str msg =
+    Input.button [ Background.color white
+                 , Element.focused [ Background.color white
+                                   ]
+                 , Element.mouseOver [ Font.color red
+                                     ]
+                 , Font.color grey
+                 , Font.semiBold
+                 , Font.family [ Font.external
+                                     { name = "Roboto"
+                                     , url = "https://fonts.googleapis.com/css?family=Roboto"
+                                     }
+                               , Font.monospace
+                               ]
+                 , Border.rounded 5
+                 , Border.color black
+                 , padding 10
+                 ]
+    { onPress = Just msg
+    , label = text str
     }
 
 -- ports
