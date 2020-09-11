@@ -94,8 +94,18 @@ const argv = yargs
           type: 'array',
           default: []
       })
+      .option('names', {
+          description: 'Include games with provided player names (tag, netplay, connect code)',
+          type: 'array',
+          default: []
+      })
       .option('excludeDittos', {
           description: 'Exclude games with dittos',
+          type: 'boolean',
+          default: false
+      })
+      .option('list', {
+          description: 'Only printout versus strings without making adding any games',
           type: 'boolean',
           default: false
       })
@@ -434,7 +444,8 @@ function getGames() {
       	        // update player+character information
       	        player0Info = makePlayerInfo(0, settings, metadata);
       	        player1Info = makePlayerInfo(1, settings, metadata);
-                // filter based on character here
+                // filter game criteria here
+                // @TODO: use a `.some` here to combine all filtering options
                 if (argv.excludeDittos && (player0Info.characterName === player1Info.characterName)) {
                     console.log(`File ${i+1} | Game excluded: ${player0Info.characterName} ditto`);
                     return;
@@ -457,6 +468,18 @@ function getGames() {
                     }
                     if (!validChars.includes(player1Info.characterName)) {
                         console.log(`File ${i+1} | Game excluded: ${player1Info.characterName} is used`);
+                        return;
+                    }
+                }
+                if (argv.names.length !== 0) {
+                    let namesLowercased = Object.values(argv.names).map(x => x.toLowerCase());
+                    ({tag, netplayName, rollbackCode} = player0Info);
+                    let player0Ids = [tag, netplayName, rollbackCode, rollbackCode.split('#').shift()].map(x => x.toLowerCase());
+                    ({tag, netplayName, rollbackCode} = player1Info);
+                    let player1Ids = [tag, netplayName, rollbackCode, rollbackCode.split('#').shift()].map(x => x.toLowerCase());
+                    if (!player0Ids.some(x => namesLowercased.includes(x)) &&
+                        !player1Ids.some(x => namesLowercased.includes(x))) {
+                        console.log(`File ${i+1} | Game excluded: No id from ${argv.names} found`);
                         return;
                     }
                 }
