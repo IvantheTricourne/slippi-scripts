@@ -14,6 +14,7 @@ import File.Select as Select
 import Html exposing (Html)
 import Json.Decode as D
 import Json.Encode as E
+import Maybe
 import Task
 
 -- model
@@ -23,6 +24,8 @@ type alias Stats =
     { totalGames : Int
     , stages : Array String
     , totalLengthSeconds : Float
+    , players : Array Player
+    , playerStats : Array PlayerStat
     }
 type alias Player =
     { playerPort : Int
@@ -41,6 +44,7 @@ type alias PlayerStat =
     , avgOpeningsPerKill : Float
     , avgDamagePerOpening : Float
     }
+
 -- update
 
 type Msg
@@ -80,12 +84,18 @@ view model =
            , centerY
            , spacing 10
            ]
-    [ el [ Font.color white
-         , centerX
-         ] (text <| case model of
-                        Nothing -> "Upload a JSON file"
-                        Just stats -> "JSON loaded: " ++ String.fromInt stats.totalGames ++ " games found"
-           )
+    [ textColumn [ Font.color white
+                 , Font.center
+                 , spacing 5
+                 ]
+          (case model of
+              Nothing -> [ text "Upload a JSON file"
+                         ]
+              Just stats -> [ paragraph [] [ text <| String.fromInt stats.totalGames ++ " games found" ]
+                            , let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
+                                  player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
+                              in paragraph [] [ text <| player0.rollbackCode ++ " vs " ++ player1.rollbackCode ]
+                            ])
     , row [ centerX
           , spacing 10
           ]
@@ -176,17 +186,78 @@ encode model =
                 [ ("totalGames", E.int stats.totalGames)
                 , ("stages", E.array E.string stats.stages)
                 , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
+                , ("players", E.array playerEncoder stats.players)
+                , ("playerStats", E.array playerStatEncoder stats.playerStats)
                 ]
+
+playerEncoder : Player -> E.Value
+playerEncoder player =
+    E.object
+        [ ("port", E.int player.playerPort)
+        , ("tag", E.string player.tag)
+        , ("netplayName", E.string player.netplayName)
+        , ("rollbackCode", E.string player.rollbackCode)
+        , ("characterName", E.string player.characterName)
+        , ("color", E.string player.color)
+        , ("idx", E.int player.idx)
+        ]
+
+playerStatEncoder : PlayerStat -> E.Value
+playerStatEncoder playerStat =
+    E.object
+        [ ("totalDamage", E.float playerStat.totalDamage)
+        , ("neutralWins", E.int playerStat.neutralWins)
+        , ("counterHits", E.int playerStat.counterHits)
+        , ("avgApm", E.float playerStat.avgApm)
+        , ("avgOpeningsPerKill", E.float playerStat.avgOpeningsPerKill)
+        , ("avgDamagePerOpening", E.float playerStat.avgDamagePerOpening)
+        ]
 
 decoder : D.Decoder Model
 decoder = D.nullable statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =
-  D.map3 Stats
+  D.map5 Stats
     (D.field "totalGames" D.int)
     (D.field "stages" <| D.array D.string)
     (D.field "totalLengthSeconds" D.float)
+    (D.field "players" <| D.array playerDecoder)
+    (D.field "playerStats" <| D.array playerStatDecoder)
+
+
+playerDecoder : D.Decoder Player
+playerDecoder =
+    D.map7 Player
+        (D.field "port" D.int)
+        (D.field "tag" D.string)
+        (D.field "netplayName" D.string)
+        (D.field "rollbackCode" D.string)
+        (D.field "characterName" D.string)
+        (D.field "color" D.string)
+        (D.field "idx" D.int)
+
+-- default player for handling maybes
+defaultPlayer : Player
+defaultPlayer =
+    { playerPort = 0
+    , tag = "XXXX"
+    , netplayName = "n/a"
+    , rollbackCode = "XXXX#YYYYY"
+    , characterName = "Sonic"
+    , color = "Emerald"
+    , idx = 5
+    }
+
+playerStatDecoder : D.Decoder PlayerStat
+playerStatDecoder =
+    D.map6 PlayerStat
+        (D.field "totalDamage" D.float)
+        (D.field "neutralWins" D.int)
+        (D.field "counterHits" D.int)
+        (D.field "avgApm" D.float)
+        (D.field "avgOpeningsPerKill" D.float)
+        (D.field "avgDamagePerOpening" D.float)
 
 -- subscriptions
 subscriptions : Model -> Sub Msg
