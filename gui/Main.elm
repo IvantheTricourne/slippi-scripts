@@ -1,37 +1,50 @@
 port module Main exposing (..)
 
 import Browser
+import Bytes exposing (Bytes)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import File as File exposing (File)
+import File.Select as Select
 import Html exposing (Html)
 import Json.Decode as D
 import Json.Encode as E
-
+import Task
 
 -- model
 
 type alias Model =
-    { dir : String
+    { cur : Maybe File
     }
 
 -- update
 
 type Msg
-    = DirChange String
-    | SearchDir
+    = SearchDir
+    | ZipRequested
+    | ZipSelected File
+    | ZipLoaded Bytes
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        DirChange dir ->
-            ( { model | dir = dir }
+        SearchDir ->
+            ( model
             , Cmd.none
             )
-        SearchDir ->
+        ZipRequested ->
+            ( model
+            , Select.file [ "application/zip" ] ZipSelected
+            )
+        ZipSelected file ->
+            ( { model | cur = Just file }
+            , Task.perform ZipLoaded (File.toBytes file)
+            )
+        ZipLoaded _ ->
             ( model
             , Cmd.none
             )
@@ -41,13 +54,23 @@ view : Model -> Html Msg
 view model =
     Element.layout [ Background.color black
                    ] <|
-    row [ centerX
-        , centerY
-        , spacing 3
+    column [ centerX
+           , centerY
+           , spacing 10
+           ]
+    [ el [ Font.color white
+         , centerX
+         ] (text <| "Loaded: " ++ case model.cur of
+                                      Nothing -> "none"
+                                      Just file -> File.name file
+           )
+    , row [ centerX
+          , spacing 10
+          ]
+        [ btnElement "go" SearchDir
+        , btnElement "zip" ZipRequested
         ]
-        [ inputElement DirChange model.dir
-        , btnElement "go" SearchDir
-        ]
+    ]
 
 -- elements
 black = rgb255 0 0 0
@@ -65,7 +88,7 @@ inputElement msg modelField =
                , Font.family [ Font.external
                                    { name = "Roboto"
                                    , url = "https://fonts.googleapis.com/css?family=Roboto"
-                                     }
+                                   }
                              , Font.sansSerif
                              ]
                , Font.size 24
@@ -122,14 +145,17 @@ updateWithStorage msg oldModel =
 encode : Model -> E.Value
 encode model =
   E.object
-    [ ("dir", E.string model.dir)
+    [ ("cur", case model.cur of
+                  Nothing -> E.null
+                  Just file -> E.null
+      )
     ]
 
 
 decoder : D.Decoder Model
 decoder =
   D.map Model
-    (D.field "dir" D.string)
+    (D.field "cur" <| D.nullable File.decoder)
 
 -- subscriptions
 subscriptions : Model -> Sub Msg
@@ -141,7 +167,9 @@ init : E.Value -> ( Model, Cmd Msg )
 init flags =
     ( case D.decodeValue decoder flags of
           Ok model -> model
-          Err _ -> { dir = "" }
+          Err _ ->
+              { cur = Nothing
+              }
     , Cmd.none
     )
 
