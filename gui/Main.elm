@@ -49,6 +49,7 @@ type alias PlayerStat =
 
 type Msg
     = Go
+    | Reset
     | JsonRequested
     | JsonSelected File
     | JsonLoaded String
@@ -58,6 +59,10 @@ update msg model =
     case msg of
         Go ->
             ( model
+            , Cmd.none
+            )
+        Reset ->
+            ( Nothing
             , Cmd.none
             )
         JsonRequested ->
@@ -89,12 +94,15 @@ view model =
                  , spacing 5
                  ]
           (case model of
-              Nothing -> [ text "Upload a JSON file"
-                         ]
-              Just stats -> [ paragraph [] [ text <| String.fromInt stats.totalGames ++ " games found" ]
-                            , let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
+              Nothing -> [ text "Upload a JSON file" ]
+              Just stats -> [ let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
                                   player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
-                              in paragraph [] [ text <| player0.rollbackCode ++ " vs " ++ player1.rollbackCode ]
+                              in paragraph [ Font.bold ]
+                                  [ text <| player0.rollbackCode ++ " vs. " ++ player1.rollbackCode ]
+                            , paragraph [ Font.italic ]
+                                [ text <| String.fromInt stats.totalGames ++ " games found" ]
+                            , paragraph []
+                                [ text <| String.join ", " (toList stats.stages)]
                             ])
     , row [ centerX
           , spacing 10
@@ -103,7 +111,7 @@ view model =
             Nothing -> [ btnElement "upload" JsonRequested
                        ]
             Just _ -> [ btnElement "go" Go
-                      , btnElement "reupload" JsonRequested
+                      , btnElement "back" Reset
                       ])
     ]
 
