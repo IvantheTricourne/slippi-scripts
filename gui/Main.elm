@@ -1,5 +1,6 @@
 port module Main exposing (..)
 
+import Array exposing (..)
 import Browser
 import Bytes exposing (Bytes)
 import Element exposing (..)
@@ -17,35 +18,56 @@ import Task
 
 -- model
 
-type alias Model =
-    { cur : Maybe File
+type alias Model = Maybe Stats
+type alias Stats =
+    { totalGames : Int
+    , stages : Array String
+    , totalLengthSeconds : Float
     }
-
+type alias Player =
+    { playerPort : Int
+    , tag : String
+    , netplayName : String
+    , rollbackCode : String
+    , characterName : String
+    , color : String
+    , idx : Int
+    }
+type alias PlayerStat =
+    { totalDamage : Float
+    , neutralWins : Int
+    , counterHits : Int
+    , avgApm : Float
+    , avgOpeningsPerKill : Float
+    , avgDamagePerOpening : Float
+    }
 -- update
 
 type Msg
-    = SearchDir
-    | ZipRequested
-    | ZipSelected File
-    | ZipLoaded Bytes
+    = Go
+    | JsonRequested
+    | JsonSelected File
+    | JsonLoaded String
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SearchDir ->
+        Go ->
             ( model
             , Cmd.none
             )
-        ZipRequested ->
+        JsonRequested ->
             ( model
-            , Select.file [ "application/zip" ] ZipSelected
+            , Select.file [ "application/json" ] JsonSelected
             )
-        ZipSelected file ->
-            ( { model | cur = Just file }
-            , Task.perform ZipLoaded (File.toBytes file)
-            )
-        ZipLoaded _ ->
+        JsonSelected file ->
             ( model
+            , Task.perform JsonLoaded (File.toString file)
+            )
+        JsonLoaded str ->
+            ( case D.decodeString statsDecoder str of
+                  Ok stats -> Just stats
+                  Err _ -> Nothing
             , Cmd.none
             )
 
@@ -60,16 +82,19 @@ view model =
            ]
     [ el [ Font.color white
          , centerX
-         ] (text <| "Loaded: " ++ case model.cur of
-                                      Nothing -> "none"
-                                      Just file -> File.name file
+         ] (text <| case model of
+                        Nothing -> "Upload a JSON file"
+                        Just stats -> "JSON loaded: " ++ String.fromInt stats.totalGames ++ " games found"
            )
     , row [ centerX
           , spacing 10
           ]
-        [ btnElement "go" SearchDir
-        , btnElement "zip" ZipRequested
-        ]
+        (case model of
+            Nothing -> [ btnElement "upload" JsonRequested
+                       ]
+            Just _ -> [ btnElement "go" Go
+                      , btnElement "reupload" JsonRequested
+                      ])
     ]
 
 -- elements
@@ -144,18 +169,24 @@ updateWithStorage msg oldModel =
 
 encode : Model -> E.Value
 encode model =
-  E.object
-    [ ("cur", case model.cur of
-                  Nothing -> E.null
-                  Just file -> E.null
-      )
-    ]
-
+    case model of
+        Nothing -> E.object []
+        Just stats ->
+            E.object
+                [ ("totalGames", E.int stats.totalGames)
+                , ("stages", E.array E.string stats.stages)
+                , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
+                ]
 
 decoder : D.Decoder Model
-decoder =
-  D.map Model
-    (D.field "cur" <| D.nullable File.decoder)
+decoder = D.nullable statsDecoder
+
+statsDecoder : D.Decoder Stats
+statsDecoder =
+  D.map3 Stats
+    (D.field "totalGames" D.int)
+    (D.field "stages" <| D.array D.string)
+    (D.field "totalLengthSeconds" D.float)
 
 -- subscriptions
 subscriptions : Model -> Sub Msg
@@ -167,9 +198,7 @@ init : E.Value -> ( Model, Cmd Msg )
 init flags =
     ( case D.decodeValue decoder flags of
           Ok model -> model
-          Err _ ->
-              { cur = Nothing
-              }
+          Err _ -> Nothing
     , Cmd.none
     )
 
