@@ -48,8 +48,7 @@ type alias PlayerStat =
 -- update
 
 type Msg
-    = Go
-    | Reset
+    = Reset
     | JsonRequested
     | JsonSelected File
     | JsonLoaded String
@@ -57,10 +56,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Go ->
-            ( model
-            , Cmd.none
-            )
         Reset ->
             ( Nothing
             , Cmd.none
@@ -89,31 +84,90 @@ view model =
            , centerY
            , spacing 10
            ]
+    (case model of
+         Nothing -> viewInit
+         Just stats -> viewStats stats)
+
+viewStats stats =
+    let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
+        player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
+    in
+    [ textColumn [ Font.color white
+                 , Font.center
+                 , spacing 20
+                 ]
+          [ paragraph [ Font.bold ]
+                [ text <| player0.rollbackCode ++ " vs. " ++ player1.rollbackCode ]
+          , paragraph [ Font.italic ]
+              [ text <| String.fromInt stats.totalGames ++ " games found" ]
+          ]
+    , row [ centerX
+          , spacing 10
+          , padding 10]
+        [ renderStatColumn [ Font.color white
+                           , Font.center
+                           , spacing 15
+                           ]
+              (listifyPlayerStat <| get 0 stats.playerStats)
+        , renderStatColumn [ Font.color white
+                           , Font.center
+                           , Font.bold
+                           , Font.underline
+                           , spacing 15
+                           ]
+            [ "Total Damage"
+            , "APM"
+            , "Openings / Kill"
+            , "Damage / Opening"
+            , "Neutral Wins"
+            , "Counter Hits"
+            ]
+        , renderStatColumn [ Font.color white
+                           , Font.center
+                           , spacing 15
+                           ]
+            (listifyPlayerStat <| get 1 stats.playerStats)
+        ]
+    , row [ centerX
+          , spacing 10
+          ]
+        [ btnElement "back" Reset ]
+    ]
+viewInit =
     [ textColumn [ Font.color white
                  , Font.center
                  , spacing 5
                  ]
-          (case model of
-              Nothing -> [ text "Upload a JSON file" ]
-              Just stats -> [ let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
-                                  player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
-                              in paragraph [ Font.bold ]
-                                  [ text <| player0.rollbackCode ++ " vs. " ++ player1.rollbackCode ]
-                            , paragraph [ Font.italic ]
-                                [ text <| String.fromInt stats.totalGames ++ " games found" ]
-                            , paragraph []
-                                [ text <| String.join ", " (toList stats.stages)]
-                            ])
+          [ text "Upload a JSON file" ]
     , row [ centerX
           , spacing 10
           ]
-        (case model of
-            Nothing -> [ btnElement "upload" JsonRequested
-                       ]
-            Just _ -> [ btnElement "go" Go
-                      , btnElement "back" Reset
-                      ])
+          [ btnElement "upload" JsonRequested ]
     ]
+
+listifyPlayerStat : Maybe PlayerStat -> List String
+listifyPlayerStat mStat =
+    case mStat of
+        Nothing -> []
+        Just stat ->
+            [ String.fromInt << round <| stat.totalDamage
+            , String.fromInt << round <| stat.avgApm
+            , String.fromInt << round <| stat.avgOpeningsPerKill
+            , String.fromInt << round <| stat.avgDamagePerOpening
+            , String.fromInt stat.neutralWins
+            , String.fromInt stat.counterHits
+            ]
+
+renderStatColumn styles strings =
+    Element.indexedTable styles
+        { data = strings
+        , columns =
+              [ { header = text ""
+                , width = fill
+                , view = \_ x -> text x
+                }
+              ]
+        }
 
 -- elements
 black = rgb255 0 0 0
