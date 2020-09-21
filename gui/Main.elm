@@ -26,6 +26,7 @@ type alias Stats =
     , totalLengthSeconds : Float
     , players : Array Player
     , playerStats : Array PlayerStat
+    , sagaIcon : String
     }
 type alias Player =
     { playerPort : Int
@@ -81,9 +82,16 @@ update msg model =
             )
 
 -- view
+-- @TODO: clean up styles
 view : Model -> Html Msg
 view model =
     Element.layout [ Background.color black
+                   , Font.family [ Font.external
+                                       { name = "Roboto"
+                                       , url = "https://fonts.googleapis.com/css?family=Roboto"
+                                       }
+                                 , Font.monospace
+                                 ]
                    ] <|
     column [ centerX
            , centerY
@@ -97,24 +105,37 @@ viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
         player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
     in
-    [ textColumn [ Font.color white
-                 , Font.center
-                 , spacing 20
-                 ]
-          [ paragraph [ Font.extraBold
-                      , Element.mouseOver [ Font.color red ]
-                      , Events.onClick Reset
-                      ]
-                [ text <| player0.rollbackCode ++ " vs. " ++ player1.rollbackCode ]
-          , paragraph [ Font.italic ]
-              [ text <| String.join " | " << toList <| stats.stages ]
-          ]
+    [ renderStageImgs << toList <| stats.stages
     , row [ centerX
-          , spacing 20
-          , padding 10
           ]
         [ renderStatColumn [ Font.color white
                            , Font.alignRight
+                           , Font.extraBold
+                           , spacing 15
+                           ]
+              [ renderPlayerName player0 ]
+        , renderStatColumn [ Font.color white
+                           , Font.center
+                           , Font.bold
+                           , Font.italic
+                           , spacing 15
+                           ]
+            [ "vs." ]
+        , renderStatColumn [ Font.color white
+                           , Font.alignLeft
+                           , Font.extraBold
+                           , spacing 15
+                           ]
+              [ renderPlayerName player1 ]
+        ]
+    , row [ centerX
+          , spacing 10
+          , padding 15
+          ]
+        [ renderStatColumn [ Font.color white
+                           , Font.alignRight
+                           , Background.uncropped <| playerCharImgPath player0
+
                            , spacing 15
                            ]
               (listifyPlayerStat <| get 0 stats.playerStats)
@@ -122,7 +143,6 @@ viewStats stats =
                            , Font.center
                            , Font.bold
                            , Font.italic
-                           , Font.underline
                            , spacing 15
                            ]
             [ "Total Damage"
@@ -135,20 +155,35 @@ viewStats stats =
             ]
         , renderStatColumn [ Font.color white
                            , Font.alignLeft
+                           , Background.uncropped <| playerCharImgPath player1
                            , spacing 15
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
+    , image [ centerX
+            , Element.mouseOver [ Background.color red
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick Reset
+            ]
+        -- @TODO: maybe make this the winner's Saga Icon?
+        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
+        , description = "Logo for set winner"
+        }
     ]
 viewInit =
-    [ el [ Font.color white
-         , Font.center
-         , Font.bold
-         , Font.italic
-         , Element.mouseOver [ Font.color red ]
-         , Events.onClick JsonRequested
-         , spacing 5
-         ] <| text "Waiting for stats file..."
+    [ image [ centerX
+            , Element.mouseOver [ Background.color red
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick JsonRequested
+            ]
+          -- @TODO: maybe make this the winner's Saga Icon?
+          { src = "rsrc/Characters/Saga Icons/Smash.png"
+          , description = "Logo for set winner"
+          }
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List String
@@ -167,68 +202,51 @@ listifyPlayerStat mStat =
               in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
             ]
 
+renderStageImgs stages =
+    row [ centerX
+        , spacing 10
+        ] <|
+        List.indexedMap
+            (\i stageName -> image [ Background.color white
+                                   , Border.rounded 3
+                                   , padding 1
+                                   ]
+                 { src = stageImgPath stageName
+                 , description = "Stage for game " ++ String.fromInt i
+                 })
+            stages
+
 renderStatColumn styles strings =
     Element.indexedTable styles
         { data = strings
         , columns =
               [ { header = text ""
-                , width = fill
+                , width = px 230
                 , view = \_ x -> text x
                 }
               ]
         }
+
+renderPlayerName player =
+    case player.rollbackCode of
+        "n/a" -> case player.netplayName of
+                     "No Name" -> player.characterName
+                     _ -> player.netplayName
+        _ -> player.netplayName ++ " / " ++ player.rollbackCode
+
+playerCharImgPath : Player -> String
+playerCharImgPath player =
+    "rsrc/Characters/Portraits/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+
+stageImgPath : String -> String
+stageImgPath stageName =
+    "rsrc/Stages/Icons/" ++ stageName ++ ".png"
 
 -- elements
 black = rgb255 0 0 0
 white = rgb255 255 255 255
 grey = rgb255 25 25 25
 red = rgb255 255 0 0
-
-inputElement msg modelField =
-    Input.text [ Background.color grey
-               , Element.focused [ Background.color grey
-                                 ]
-               , Font.color white
-               , Font.extraBold
-               , Font.center
-               , Font.family [ Font.external
-                                   { name = "Roboto"
-                                   , url = "https://fonts.googleapis.com/css?family=Roboto"
-                                   }
-                             , Font.sansSerif
-                             ]
-               , Font.size 24
-               , Border.color white
-               , Border.rounded 5
-               , Border.width 2
-               ]
-    { onChange = msg
-    , text = modelField
-    , placeholder = Nothing
-    , label = Input.labelHidden ""
-    }
-
-btnElement str msg =
-    Input.button [ Background.color white
-                 , Element.focused [ Background.color white
-                                   ]
-                 , Element.mouseOver [ Font.color red
-                                     ]
-                 , Font.color grey
-                 , Font.semiBold
-                 , Font.family [ Font.external
-                                     { name = "Roboto"
-                                     , url = "https://fonts.googleapis.com/css?family=Roboto"
-                                     }
-                               , Font.monospace
-                               ]
-                 , Border.rounded 5
-                 , Border.color black
-                 , padding 10
-                 ]
-    { onPress = Just msg
-    , label = text str
-    }
 
 -- ports
 
@@ -259,6 +277,7 @@ encode model =
                 , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
                 , ("players", E.array playerEncoder stats.players)
                 , ("playerStats", E.array playerStatEncoder stats.playerStats)
+                , ("sagaIcon" , E.string stats.sagaIcon)
                 ]
 
 playerEncoder : Player -> E.Value
@@ -297,12 +316,13 @@ decoder = D.nullable statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =
-  D.map5 Stats
+  D.map6 Stats
     (D.field "totalGames" D.int)
     (D.field "stages" <| D.array D.string)
     (D.field "totalLengthSeconds" D.float)
     (D.field "players" <| D.array playerDecoder)
     (D.field "playerStats" <| D.array playerStatDecoder)
+    (D.field "sagaIcon" <| D.string)
 
 
 playerDecoder : D.Decoder Player

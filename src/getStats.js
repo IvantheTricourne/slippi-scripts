@@ -66,19 +66,64 @@ function getMostUsedMove(arr) {
              timesUsed: mf
            };
 }
+// associated saga icon / character
+const characterSagaDict = {
+    "Fox": "Star Fox",
+    "Falco": "Star Fox",
+    "Jigglypuff": "Pokemon",
+    "Pikachu": "Pokemon",
+    "Mewtwo": "Pokemon",
+    "Pichu": "Pokemon",
+    "Captain Falcon": "F-Zero",
+    "Donkey Kong": "Donkey Kong",
+    "Mr. Game & Watch": "Mr Game & Watch",
+    "Kirby": "Kirby",
+    "Bowser": "Mario",
+    "Link": "Zelda",
+    "Luigi": "Mario",
+    "Mario": "Mario",
+    "Marth": "Fire Emblem",
+    "Ness": "Mother",
+    "Peach": "Mario",
+    "Ice Climbers": "Ice Climbers",
+    "Samus": "Metroid",
+    "Yoshi": "Yoshi",
+    "Zelda": "Zelda",
+    "Sheik": "Zelda",
+    "Young Link": "Zelda",
+    "Dr. Mario": "Mario",
+    "Roy": "Fire Emblem",
+    "Ganondorf": "Zelda"
+};
+function getSagaIconName(statsJson) {
+    let player0Kills = statsJson.playerStats[0].kills;
+    let player1Kills = statsJson.playerStats[1].kills;
+    // determine who had the most kill
+    if (player0Kills > player1Kills) {
+        return characterSagaDict[statsJson.players[0].characterName];
+    } else if (player1Kills > player0Kills) {
+        return characterSagaDict[statsJson.players[1].characterName];
+    } else {
+        // return the smash logo when its a tie/indeterminate
+        return "Smash";
+    }
+}
 var statsJson = {
     "totalGames": 0,
     "stages": [],
+    "wins": [],
     "totalLengthSeconds": 0,
     "players": null,
     "playerStats": [
         { "totalDamage": 0,
           "neutralWins": 0,
-          "counterHits": 0
+          "counterHits": 0,
+          "kills": 0
         },
         { "totalDamage": 0,
           "neutralWins": 0,
-          "counterHits": 0
+          "counterHits": 0,
+          "kills": 0
         }
     ]
 };
@@ -86,7 +131,7 @@ var playerTotals = [
     { "apms": 0,
       "openingsPerKills": 0,
       "damagePerOpenings": 0,
-      "moves": []
+      "moves": [],
     },
     { "apms": 0,
       "openingsPerKills": 0,
@@ -148,19 +193,19 @@ _.each(files, (file, i) => {
         });
         // write the stats to file
         _.each(stats.overall, (playerStats, i) => {
-            // console.log(playerStats);
             // sum things
             statsJson.playerStats[i].totalDamage += playerStats.totalDamage;
             statsJson.playerStats[i].neutralWins += playerStats.neutralWinRatio.count;
             statsJson.playerStats[i].counterHits += playerStats.counterHitRatio.count;
+            statsJson.playerStats[i].kills += playerStats.killCount;
             // avg things
             playerTotals[i].apms += playerStats.inputsPerMinute.ratio;
             playerTotals[i].openingsPerKills += playerStats.openingsPerKill.ratio;
             playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
         });
-        // track stages, total games and set length
+        // track stages, winner, total games and set length
         statsJson.stages.push(slp.stages.getStageName(settings.stageId));
-        statsJson.totalGames += 1;
+         statsJson.totalGames += 1;
         statsJson.totalLengthSeconds += paddedGameLength;
     } catch (err) {
         fs.appendFileSync("./get-stats-log.txt", `${err.stack}\n\n`);
@@ -175,6 +220,8 @@ if (statsJson.totalGames === 0) {
 }
 // write player info
 statsJson.players = [player0Info, player1Info];
+// determine which saga icon to use
+statsJson.sagaIcon = getSagaIconName(statsJson);
 // write avgs
 let totalGames = statsJson.totalGames;
 _.each(playerTotals, (totals, i) => {
