@@ -27,8 +27,8 @@ function createWindow () {
     mainWindow.setMenuBarVisibility(false);
     // display the index.html file
     mainWindow.loadURL(`file://${ __dirname }/index.html`);
-    // open dev tools by default so we can see any console errors
-    mainWindow.webContents.openDevTools();
+    // // open dev tools by default so we can see any console errors
+    // mainWindow.webContents.openDevTools();
     mainWindow.on('closed', function () {
         mainWindow = null;
     });
