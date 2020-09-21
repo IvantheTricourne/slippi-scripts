@@ -17,13 +17,17 @@
         "slp-parser-js": "^4.1.0",
         "yargs": "^15.1.0"
     },
-    "devDependencies": {},
+    "devDependencies": {
+        "chokidar-cli": "^2.1.0"
+    },
     "scripts": {
         "play": "node src/playback play -c ../config.json",
         "record": "node src/playback record -c ../config.json",
         "test": "node src/getGames.js",
-        "start": "elm-live gui/Main.elm -- --output=index.js --optimize",
-        "electron": "electron main.js"
+        "elm": "elm make gui/Main.elm --output index.js --optimize || true",
+        "elm:watch": "chokidar '**/*.elm' -c 'npm run elm'",
+        "start": "electron main.js",
+        "watch": "npm run start & npm run elm:watch & wait"
     },
     "repository": {
         "type": "git",

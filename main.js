@@ -1,5 +1,6 @@
 'use strict';
 const electron = require('electron');
+const chokidar = require('chokidar'); // add chokidar
 
 const app = electron.app; // this is our app
 const BrowserWindow = electron.BrowserWindow; // This is a Module that creates windows  
@@ -7,6 +8,14 @@ const BrowserWindow = electron.BrowserWindow; // This is a Module that creates w
 let mainWindow; // saves a global reference to mainWindow so it doesn't get garbage collected
 
 app.on('ready', createWindow); // called when electron has initialized
+
+// tell chokidar to watch these files for changes
+// reload the window if there is one
+chokidar.watch(['ports.js', 'index.html', 'index.js']).on('change', () => {
+    if (mainWindow) {
+        mainWindow.reload();
+    }
+});
 
 // This will create our app window, no surprise there
 function createWindow () {

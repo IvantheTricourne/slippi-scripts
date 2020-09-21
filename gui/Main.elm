@@ -148,7 +148,7 @@ viewInit =
          , Element.mouseOver [ Font.color red ]
          , Events.onClick JsonRequested
          , spacing 5
-         ] <| text "Waiting for stats..."
+         ] <| text "Waiting for stats file..."
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List String
