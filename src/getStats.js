@@ -8,7 +8,7 @@ const yargs = require('yargs'); // npm install yargs
 
 const argv = yargs
       .scriptName("getGamesOnDate")
-      .usage('$0 <cmd> [args]')
+      .usage('$0 [args]')
       // input/output options
       .option('dir', {
           alias: 'd',

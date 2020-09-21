@@ -1,8 +1,7 @@
 {
     "name": "slippi-scripts",
     "version": "1.0.0",
-    "description": "The CLI Slippi script to rule them all",
-    "main": "src/getGames.js",
+    "description": "A collection of Slippi scripts and other vaguely useful things",
     "dependencies": {
         "chalk": "^3.0.0",
         "chokidar": "^3.3.1",
@@ -21,8 +20,8 @@
         "chokidar-cli": "^2.1.0"
     },
     "scripts": {
-        "play": "node src/playback play -c ../config.json",
-        "record": "node src/playback record -c ../config.json",
+        "play": "node src/playback.js play -c ../config.json",
+        "record": "node src/playback.js record -c ../config.json",
         "test": "node src/getGames.js",
         "elm": "elm make gui/Main.elm --output index.js --optimize || true",
         "elm:watch": "chokidar '**/*.elm' -c 'npm run elm'",
