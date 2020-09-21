@@ -43,6 +43,11 @@ type alias PlayerStat =
     , avgApm : Float
     , avgOpeningsPerKill : Float
     , avgDamagePerOpening : Float
+    , favoriteMove : FavoriteMove
+    }
+type alias FavoriteMove =
+    { moveName : String
+    , timesUsed : Int
     }
 
 -- update
@@ -96,22 +101,27 @@ viewStats stats =
                  , Font.center
                  , spacing 20
                  ]
-          [ paragraph [ Font.bold ]
+          [ paragraph [ Font.extraBold
+                      , Element.mouseOver [ Font.color red ]
+                      , Events.onClick Reset
+                      ]
                 [ text <| player0.rollbackCode ++ " vs. " ++ player1.rollbackCode ]
           , paragraph [ Font.italic ]
-              [ text <| String.fromInt stats.totalGames ++ " games found" ]
+              [ text <| String.join " | " << toList <| stats.stages ]
           ]
     , row [ centerX
-          , spacing 10
-          , padding 10]
+          , spacing 20
+          , padding 10
+          ]
         [ renderStatColumn [ Font.color white
-                           , Font.center
+                           , Font.alignRight
                            , spacing 15
                            ]
               (listifyPlayerStat <| get 0 stats.playerStats)
         , renderStatColumn [ Font.color white
                            , Font.center
                            , Font.bold
+                           , Font.italic
                            , Font.underline
                            , spacing 15
                            ]
@@ -121,28 +131,24 @@ viewStats stats =
             , "Damage / Opening"
             , "Neutral Wins"
             , "Counter Hits"
+            , "Favorite Move"
             ]
         , renderStatColumn [ Font.color white
-                           , Font.center
+                           , Font.alignLeft
                            , spacing 15
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
-    , row [ centerX
-          , spacing 10
-          ]
-        [ btnElement "back" Reset ]
     ]
 viewInit =
-    [ textColumn [ Font.color white
-                 , Font.center
-                 , spacing 5
-                 ]
-          [ text "Upload a JSON file" ]
-    , row [ centerX
-          , spacing 10
-          ]
-          [ btnElement "upload" JsonRequested ]
+    [ el [ Font.color white
+         , Font.center
+         , Font.bold
+         , Font.italic
+         , Element.mouseOver [ Font.color red ]
+         , Events.onClick JsonRequested
+         , spacing 5
+         ] <| text "Waiting for stats..."
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List String
@@ -156,6 +162,9 @@ listifyPlayerStat mStat =
             , String.fromInt << round <| stat.avgDamagePerOpening
             , String.fromInt stat.neutralWins
             , String.fromInt stat.counterHits
+            , let moveName = stat.favoriteMove.moveName
+                  timesUsed = stat.favoriteMove.timesUsed
+              in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
             ]
 
 renderStatColumn styles strings =
@@ -273,6 +282,14 @@ playerStatEncoder playerStat =
         , ("avgApm", E.float playerStat.avgApm)
         , ("avgOpeningsPerKill", E.float playerStat.avgOpeningsPerKill)
         , ("avgDamagePerOpening", E.float playerStat.avgDamagePerOpening)
+        , ("favoriteMove", favoriteMoveEncoder playerStat.favoriteMove)
+        ]
+
+favoriteMoveEncoder : FavoriteMove -> E.Value
+favoriteMoveEncoder favMov =
+    E.object
+        [ ("moveName", E.string favMov.moveName)
+        , ("timesUsed", E.int favMov.timesUsed)
         ]
 
 decoder : D.Decoder Model
@@ -313,13 +330,20 @@ defaultPlayer =
 
 playerStatDecoder : D.Decoder PlayerStat
 playerStatDecoder =
-    D.map6 PlayerStat
+    D.map7 PlayerStat
         (D.field "totalDamage" D.float)
         (D.field "neutralWins" D.int)
         (D.field "counterHits" D.int)
         (D.field "avgApm" D.float)
         (D.field "avgOpeningsPerKill" D.float)
         (D.field "avgDamagePerOpening" D.float)
+        (D.field "favoriteMove" favoriteMoveDecoder)
+
+favoriteMoveDecoder : D.Decoder FavoriteMove
+favoriteMoveDecoder =
+    D.map2 FavoriteMove
+        (D.field "moveName" D.string)
+        (D.field "timesUsed" D.int)
 
 -- subscriptions
 subscriptions : Model -> Sub Msg

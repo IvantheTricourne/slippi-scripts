@@ -54,6 +54,24 @@ function sec2time(timeInSeconds) {
     return pad(hours, 2) + ':' + pad(minutes, 2) + ':' + pad(seconds, 2);
 }
 
+
+// allow putting files in folders
+function walk(dir, allowDir = true) {
+    let results = [];
+    let list = fs.readdirSync(dir);
+    _.each(list, (file) => {
+        file = path.join(dir, file);
+        let stat = fs.statSync(file);
+        if (stat && stat.isDirectory() && allowDir) {
+            // Recurse into a subdirectory
+            results = results.concat(walk(file));
+        } else if (path.extname(file) === ".slp"){
+            results.push(file);
+        }
+    });
+    return results;
+}
+
 // exports
 exports.isWin = isWin;
 exports.sleep = sleep;
