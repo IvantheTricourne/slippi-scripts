@@ -1,3 +1,7 @@
+const _ = require('lodash');
+const fs = require('fs');
+const path = require('path');
+
 // utils module
 const { exec, execSync } = require('child_process');
 
@@ -78,3 +82,4 @@ exports.sleep = sleep;
 exports.runCommand = runCommand;
 exports.kill = kill;
 exports.sec2time = sec2time;
+exports.walk = walk;
