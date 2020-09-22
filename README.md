@@ -19,6 +19,8 @@ For usage information, see the `--help` option for any of the scripts below.
 1. Generate stats for a set of `.slp` files: `src/getStats.js`
    * outputs a `stats.json` file for use in the included _Slippi Stats Viewer_ app.
    * to run _Slippi Stats Viewer_, `npm start`
+
+![](demo/demo.gif)
 2. Generate a playback queue for several `.slp` files (and optionally a highlight reel): `src/getGames.js`
    * provides general versus info (e.g. opponent tags, names, codes, etc.)
    * provides total play time on a per opponent basis
