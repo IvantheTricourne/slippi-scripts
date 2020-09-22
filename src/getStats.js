@@ -41,7 +41,7 @@ function makePlayerInfo(idx, settings, metadata) {
         tag: player.nametag,
         netplayName: _.get(metadata, ["players", idx, "names", "netplay"], null) || "No Name",
         rollbackCode: _.get(metadata, ["players", idx, "names", "code"], null) || "n/a",
-      	characterName: slp.characters.getCharacterShortName(player.characterId),
+      	characterName: slp.characters.getCharacterName(player.characterId),
       	color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
         idx: idx
     };
@@ -132,11 +132,13 @@ var playerTotals = [
       "openingsPerKills": 0,
       "damagePerOpenings": 0,
       "moves": [],
+      "killMoves": []
     },
     { "apms": 0,
       "openingsPerKills": 0,
       "damagePerOpenings": 0,
-      "moves": []
+      "moves": [],
+      "killMoves": []
     }
 ];
 _.each(files, (file, i) => {
@@ -183,13 +185,13 @@ _.each(files, (file, i) => {
             return;
         }
         // get moves from conversions and combos
-        _.each(stats.conversions, (conversion, i) => {
-            let namedMoves = conversion.moves.map(x => slp.moves.getMoveShortName(x.moveId));
-            playerTotals[conversion.playerIndex].moves = playerTotals[conversion.playerIndex].moves.concat(namedMoves);
-        });
-        _.each(stats.combos, (combo, i) => {
-            let namedMoves = combo.moves.map(x => slp.moves.getMoveShortName(x.moveId));
+        _.each(stats.combos.concat(stats.conversions), (combo, i) => {
+            let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
             playerTotals[combo.playerIndex].moves = playerTotals[combo.playerIndex].moves.concat(namedMoves);
+            if (combo.didKill) {
+                let killingMove = namedMoves[namedMoves.length - 1];
+                playerTotals[combo.playerIndex].killMoves.push(killingMove);
+            }
         });
         // write the stats to file
         _.each(stats.overall, (playerStats, i) => {
@@ -230,5 +232,6 @@ _.each(playerTotals, (totals, i) => {
     statsJson.playerStats[i].avgOpeningsPerKill = totals.openingsPerKills / totalGames;
     statsJson.playerStats[i].avgDamagePerOpening = totals.damagePerOpenings / totalGames;
     statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
+    statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
 });
 fs.writeFileSync("./stats.json", JSON.stringify(statsJson));

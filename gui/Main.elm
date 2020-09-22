@@ -45,6 +45,7 @@ type alias PlayerStat =
     , avgOpeningsPerKill : Float
     , avgDamagePerOpening : Float
     , favoriteMove : FavoriteMove
+    , favoriteKillMove : FavoriteMove
     }
 type alias FavoriteMove =
     { moveName : String
@@ -105,12 +106,14 @@ viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
         player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
     in
-    [ renderStageImgs << toList <| stats.stages
-    , row [ centerX
+    [ row [ centerX
+          , spacing 10
+          , padding 5
           ]
         [ renderStatColumn [ Font.color white
                            , Font.alignRight
                            , Font.extraBold
+                           , moveLeft 190
                            , spacing 15
                            ]
               [ renderPlayerName player0 ]
@@ -118,24 +121,49 @@ viewStats stats =
                            , Font.center
                            , Font.bold
                            , Font.italic
+                           , behindContent <| image
+                               [ centerX
+                               , centerY
+                               , Element.mouseOver [ Background.color cyan
+                                                   ]
+                               , padding 2
+                               , Border.rounded 5
+                               , Events.onClick Reset
+                               , moveUp 25
+                               , scale 1.25
+                               ]
+                                 { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
+                                 , description = "Logo for set winner"
+                                 }
                            , spacing 15
                            ]
-            [ "vs." ]
+            [ "" ]
         , renderStatColumn [ Font.color white
                            , Font.alignLeft
                            , Font.extraBold
+                           , moveRight 190
                            , spacing 15
                            ]
               [ renderPlayerName player1 ]
         ]
     , row [ centerX
           , spacing 10
-          , padding 15
+          , padding 10
           ]
         [ renderStatColumn [ Font.color white
                            , Font.alignRight
-                           , Background.uncropped <| playerCharImgPath player0
-
+                           , behindContent <| image
+                               [ centerX
+                               , centerY
+                               , scale 1.5
+                               , moveLeft 150
+                               , Background.color grey
+                               , Border.rounded 5
+                               , padding 5
+                               ]
+                               { src = playerCharImgPath player0
+                               , description = player0.rollbackCode
+                               }
                            , spacing 15
                            ]
               (listifyPlayerStat <| get 0 stats.playerStats)
@@ -152,35 +180,41 @@ viewStats stats =
             , "Neutral Wins"
             , "Counter Hits"
             , "Favorite Move"
+            , "Favorite Kill Move"
             ]
         , renderStatColumn [ Font.color white
                            , Font.alignLeft
-                           , Background.uncropped <| playerCharImgPath player1
+                           , Font.glow black 1000
+                           , behindContent <| image
+                               [ centerX
+                               , centerY
+                               , scale 1.5
+                               , moveRight 150
+                               , Background.color grey
+                               , Border.rounded 5
+                               , padding 5
+                               ]
+                               { src = playerCharImgPath player1
+                               , description = player1.rollbackCode
+                               }
                            , spacing 15
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
-    , image [ centerX
-            , Element.mouseOver [ Background.color red
-                                ]
-            , padding 2
-            , Border.rounded 5
-            , Events.onClick Reset
-            ]
-        -- @TODO: maybe make this the winner's Saga Icon?
-        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
-        , description = "Logo for set winner"
-        }
+    , renderStageImgs << toList <| stats.stages
     ]
 viewInit =
     [ image [ centerX
-            , Element.mouseOver [ Background.color red
+            , Element.mouseOver [ Background.color cyan
                                 ]
             , padding 2
             , Border.rounded 5
             , Events.onClick JsonRequested
+            , below <| el
+                [ Font.color white
+                , centerX
+                ] (text "stats")
             ]
-          -- @TODO: maybe make this the winner's Saga Icon?
           { src = "rsrc/Characters/Saga Icons/Smash.png"
           , description = "Logo for set winner"
           }
@@ -200,19 +234,26 @@ listifyPlayerStat mStat =
             , let moveName = stat.favoriteMove.moveName
                   timesUsed = stat.favoriteMove.timesUsed
               in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
+            , let killMoveName = stat.favoriteKillMove.moveName
+                  timesUsed = stat.favoriteKillMove.timesUsed
+              in killMoveName ++ " (" ++ String.fromInt timesUsed ++ ")"
             ]
 
 renderStageImgs stages =
-    row [ centerX
-        , spacing 10
+    row [ Background.color grey
+        , Border.rounded 5
+        , spacing 15
+        , padding 10
+        , centerX
         ] <|
         List.indexedMap
             (\i stageName -> image [ Background.color white
                                    , Border.rounded 3
+                                   , scale 1.1
                                    , padding 1
                                    ]
                  { src = stageImgPath stageName
-                 , description = "Stage for game " ++ String.fromInt i
+                 , description = stageName
                  })
             stages
 
@@ -221,7 +262,7 @@ renderStatColumn styles strings =
         { data = strings
         , columns =
               [ { header = text ""
-                , width = px 230
+                , width = px 175
                 , view = \_ x -> text x
                 }
               ]
@@ -232,7 +273,7 @@ renderPlayerName player =
         "n/a" -> case player.netplayName of
                      "No Name" -> player.characterName
                      _ -> player.netplayName
-        _ -> player.netplayName ++ " / " ++ player.rollbackCode
+        _ -> player.rollbackCode
 
 playerCharImgPath : Player -> String
 playerCharImgPath player =
@@ -247,6 +288,7 @@ black = rgb255 0 0 0
 white = rgb255 255 255 255
 grey = rgb255 25 25 25
 red = rgb255 255 0 0
+cyan = rgb255 175 238 238
 
 -- ports
 
@@ -302,6 +344,7 @@ playerStatEncoder playerStat =
         , ("avgOpeningsPerKill", E.float playerStat.avgOpeningsPerKill)
         , ("avgDamagePerOpening", E.float playerStat.avgDamagePerOpening)
         , ("favoriteMove", favoriteMoveEncoder playerStat.favoriteMove)
+        , ("favoriteKillMove", favoriteMoveEncoder playerStat.favoriteKillMove)
         ]
 
 favoriteMoveEncoder : FavoriteMove -> E.Value
@@ -350,7 +393,7 @@ defaultPlayer =
 
 playerStatDecoder : D.Decoder PlayerStat
 playerStatDecoder =
-    D.map7 PlayerStat
+    D.map8 PlayerStat
         (D.field "totalDamage" D.float)
         (D.field "neutralWins" D.int)
         (D.field "counterHits" D.int)
@@ -358,6 +401,7 @@ playerStatDecoder =
         (D.field "avgOpeningsPerKill" D.float)
         (D.field "avgDamagePerOpening" D.float)
         (D.field "favoriteMove" favoriteMoveDecoder)
+        (D.field "favoriteKillMove" favoriteMoveDecoder)
 
 favoriteMoveDecoder : D.Decoder FavoriteMove
 favoriteMoveDecoder =
