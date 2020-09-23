@@ -1,5 +1,7 @@
 # slippi-scripts
 
+[![Build Status](https://travis-ci.com/IvantheTricourne/slippi-scripts.svg?branch=master)](https://travis-ci.com/IvantheTricourne/slippi-scripts)
+
 _A collection of Slippi scripts and other vaguely useful things_.
 
 ## how
