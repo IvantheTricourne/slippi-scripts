@@ -1,0 +1,6 @@
+language: node_js
+script:
+  - echo 'Building elm'
+  - npm run elm
+  - echo 'Running tests'
+  - npm run test
