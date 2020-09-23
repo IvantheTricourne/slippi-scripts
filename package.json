@@ -17,16 +17,17 @@
         "yargs": "^15.1.0"
     },
     "devDependencies": {
-        "chokidar-cli": "^2.1.0"
+        "chokidar-cli": "^2.1.0",
+        "mocha": "^8.1.3"
     },
     "scripts": {
         "play": "node src/playback.js play -c ../config.json",
         "record": "node src/playback.js record -c ../config.json",
-        "test": "node src/getGames.js",
         "elm": "elm make gui/Main.elm --output index.js --optimize || true",
         "elm:watch": "chokidar '**/*.elm' -c 'npm run elm'",
         "start": "npm run elm & electron main.js",
-        "watch": "npm run start & npm run elm:watch & wait"
+        "watch": "npm run start & npm run elm:watch & wait",
+        "test": "mocha"
     },
     "repository": {
         "type": "git",

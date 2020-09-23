@@ -22,6 +22,7 @@ import Task
 type alias Model = Maybe Stats
 type alias Stats =
     { totalGames : Int
+    , wins : Array Player
     , stages : Array String
     , totalLengthSeconds : Float
     , players : Array Player
@@ -201,7 +202,7 @@ viewStats stats =
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
-    , renderStageImgs << toList <| stats.stages
+    , renderStageImgsWithWinner (toList stats.stages) (toList stats.wins)
     ]
 viewInit =
     [ image [ centerX
@@ -239,7 +240,33 @@ listifyPlayerStat mStat =
               in killMoveName ++ " (" ++ String.fromInt timesUsed ++ ")"
             ]
 
-renderStageImgs stages =
+renderStageImgsWithWinner stages wins =
+    row [ Background.color black
+        , Border.rounded 5
+        , spacing 15
+        , padding 10
+        , centerX
+        ] <|
+        List.map2
+            (\stageName winnerInfo ->
+                 image [ Background.color white
+                       , Border.rounded 3
+                       , scale 1.1
+                       , padding 1
+                       , below <| image
+                           [ centerX
+                           , padding 5
+                           ]
+                           { src = playerCharIconPath winnerInfo
+                           , description = renderPlayerName winnerInfo
+                           }
+                       ]
+                 { src = stageImgPath stageName
+                 , description = stageName
+                 })
+            stages wins
+
+renderWinImgs wins =
     row [ Background.color grey
         , Border.rounded 5
         , spacing 15
@@ -247,15 +274,14 @@ renderStageImgs stages =
         , centerX
         ] <|
         List.indexedMap
-            (\i stageName -> image [ Background.color white
-                                   , Border.rounded 3
-                                   , scale 1.1
-                                   , padding 1
-                                   ]
-                 { src = stageImgPath stageName
-                 , description = stageName
+            (\i winnerInfo -> image [ Border.rounded 3
+                                    , scale 1.1
+                                    , padding 1
+                                    ]
+                 { src = playerCharIconPath winnerInfo
+                 , description = renderPlayerName winnerInfo
                  })
-            stages
+            wins
 
 renderStatColumn styles strings =
     Element.indexedTable styles
@@ -275,9 +301,14 @@ renderPlayerName player =
                      _ -> player.netplayName
         _ -> player.rollbackCode
 
+-- @TODO: maybe move these all the node side
 playerCharImgPath : Player -> String
 playerCharImgPath player =
     "rsrc/Characters/Portraits/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+
+playerCharIconPath : Player -> String
+playerCharIconPath player =
+    "rsrc/Characters/Stock Icons/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
 
 stageImgPath : String -> String
 stageImgPath stageName =
@@ -315,6 +346,7 @@ encode model =
         Just stats ->
             E.object
                 [ ("totalGames", E.int stats.totalGames)
+                , ("wins", E.array playerEncoder stats.wins)
                 , ("stages", E.array E.string stats.stages)
                 , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
                 , ("players", E.array playerEncoder stats.players)
@@ -359,8 +391,9 @@ decoder = D.nullable statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =
-  D.map6 Stats
+  D.map7 Stats
     (D.field "totalGames" D.int)
+    (D.field "wins" <| D.array playerDecoder)
     (D.field "stages" <| D.array D.string)
     (D.field "totalLengthSeconds" D.float)
     (D.field "players" <| D.array playerDecoder)

@@ -32,7 +32,6 @@ console.log(`${files.length} files found in target directory`);
 var player0Info = {};
 var player1Info = {};
 var currPlayers = null;
-
 // create player info object
 function makePlayerInfo(idx, settings, metadata) {
     let player = _.get(settings, ["players", idx]);
@@ -45,6 +44,43 @@ function makePlayerInfo(idx, settings, metadata) {
       	color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
         idx: idx
     };
+}
+// determine if action state represents player in dead state
+const deadStates = [ 0x000, 0x001, 0x002, 0x003, 0x004, 0x005,
+                     0x006, 0x007, 0x008, 0x009, 0x009, 0x00A
+                   ];
+function playerIsDead(playerFrame) {
+    return (deadStates.includes(playerFrame.pre.actionStateId) ||
+            deadStates.includes(playerFrame.post.actionStateId)
+           );
+}
+// determine who won the game by determining who died when the game ended
+function getGameWinner(game, player0, player1) {
+    let latestFrame = game.getLatestFrame();
+    let player0Frame = latestFrame.players[0];
+    let player1Frame = latestFrame.players[1];
+    let noOneWins = {
+      	port: 5,
+        tag: "",
+        netplayName: "No Name",
+        rollbackCode: "n/a",
+      	characterName: "Wireframe",
+      	color: "Default",
+        idx: 5
+    };
+    if (playerIsDead(player0Frame) && playerIsDead(player1Frame)) {
+        // both players died
+        return noOneWins;
+    } else if (playerIsDead(player0Frame)) {
+        // player 0 lost
+        return player1;
+    } else if (playerIsDead(player1Frame)) {
+        // player 1 lost
+        return player0;
+    } else {
+        // game didn't end with a death
+        return noOneWins;
+    }
 }
 // get most used move
 function getMostUsedMove(arr) {
@@ -175,6 +211,14 @@ _.each(files, (file, i) => {
         }
         // Get stats after filtering is done (bc it slows things down a lot)
         const stats = game.getStats();
+        // console.log(stats); // stats.gameComplete
+        // console.log(game.getLatestFrame().players[0].pre.actionStateId);
+        // console.log(game.getLatestFrame().players[0].post.actionStateId);
+        // console.log(playerIsDead(game.getLatestFrame().players[0]));
+        // console.log(game.getLatestFrame().players[1].pre.actionStateId);
+        // console.log(game.getLatestFrame().players[1].post.actionStateId);
+        // console.log(playerIsDead(game.getLatestFrame().players[1]));
+        // console.log(`Winner idx: ${getGameWinner(game, player0Info, player1Info).idx}`);
         // determine whether to keep the game
         let totalKills = 0;
         _.each(stats.overall, (playerStats, i) => {
@@ -207,7 +251,8 @@ _.each(files, (file, i) => {
         });
         // track stages, winner, total games and set length
         statsJson.stages.push(slp.stages.getStageName(settings.stageId));
-         statsJson.totalGames += 1;
+        statsJson.wins.push(getGameWinner(game, player0Info, player1Info));
+        statsJson.totalGames += 1;
         statsJson.totalLengthSeconds += paddedGameLength;
     } catch (err) {
         fs.appendFileSync("./get-stats-log.txt", `${err.stack}\n\n`);
