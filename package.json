@@ -19,15 +19,18 @@
     },
     "devDependencies": {
         "chokidar-cli": "^2.1.0",
-        "mocha": "^8.1.3"
+        "mocha": "^8.1.3",
+        "nodemon": "^2.0.4"
     },
     "scripts": {
         "play": "node src/playback.js play -c ../config.json",
         "record": "node src/playback.js record -c ../config.json",
         "elm": "elm make gui/Main.elm --output index.js --optimize || true",
         "elm:watch": "chokidar '**/*.elm' -c 'npm run elm'",
-        "start": "npm run elm & electron main.js",
-        "watch": "npm run start & npm run elm:watch & wait",
+        "serve": "node src/server.js",
+        "serve:watch": "nodemon src/server.js",
+        "start": "npm run elm & npm run serve & electron main.js",
+        "watch": "npm run elm:watch & npm run serve:watch & electron main.js & wait",
         "test": "mocha"
     },
     "repository": {
