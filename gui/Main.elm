@@ -189,11 +189,11 @@ viewStats stats =
                            , spacing 15
                            ]
             [ "Total Damage"
-            , "APM"
-            , "Openings / Kill"
             , "Damage / Opening"
+            , "Openings / Kill"
             , "Neutral Wins"
             , "Counter Hits"
+            , "APM"
             , "Favorite Move"
             , "Favorite Kill Move"
             ]
@@ -266,11 +266,11 @@ listifyPlayerStat mStat =
         Nothing -> []
         Just stat ->
             [ String.fromInt << round <| stat.totalDamage
-            , String.fromInt << round <| stat.avgApm
-            , String.fromInt << round <| stat.avgOpeningsPerKill
             , String.fromInt << round <| stat.avgDamagePerOpening
+            , String.fromInt << round <| stat.avgOpeningsPerKill
             , String.fromInt stat.neutralWins
             , String.fromInt stat.counterHits
+            , String.fromInt << round <| stat.avgApm
             , let moveName = stat.favoriteMove.moveName
                   timesUsed = stat.favoriteMove.timesUsed
               in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
@@ -285,13 +285,20 @@ renderStageImgsWithWinner games =
         , spacing 15
         , padding 10
         , centerX
+        , moveDown 20
         ] <|
-        List.map
-            (\gameInfo ->
+        List.indexedMap
+            (\i gameInfo ->
                  image [ Background.color white
                        , Border.rounded 3
                        , scale 1.1
                        , padding 1
+                       , above <| el
+                           [ Font.color white
+                           , centerX
+                           , scale 0.55
+                           ]
+                           (text << String.fromInt <| i + 1)
                        , below <| image
                            [ centerX
                            , padding 5
