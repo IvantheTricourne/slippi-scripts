@@ -142,65 +142,43 @@ viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
         player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
     in
-    [ row [ centerX
-          , spacing 10
-          , padding 5
-          ]
-        [ renderStatColumn [ Font.color white
-                           , Font.alignRight
-                           , Font.extraBold
-                           , moveLeft 190
-                           , spacing 15
-                           ]
-              [ renderPlayerName player0 ]
-        , renderStatColumn [ Font.color white
-                           , Font.center
-                           , Font.bold
-                           , Font.italic
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , Element.mouseOver [ Background.color cyan
-                                                   ]
-                               , padding 2
-                               , Border.rounded 5
-                               , Events.onClick Reset
-                               , moveUp 25
-                               , scale 1.25
-                               ]
-                                 { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
-                                 , description = "Logo for set winner"
-                                 }
-                           , spacing 15
-                           ]
-            [ "" ]
-        , renderStatColumn [ Font.color white
-                           , Font.alignLeft
-                           , Font.extraBold
-                           , moveRight 190
-                           , spacing 15
-                           ]
-              [ renderPlayerName player1 ]
-        ]
+    [ image [ centerX
+            , centerY
+            , Element.mouseOver [ Background.color cyan
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick Reset
+            , scale 1.25
+            ]
+          { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
+          , description = "Logo for set winner"
+          }
     , row [ centerX
           , spacing 10
           , padding 10
           ]
-        [ renderStatColumn [ Font.color white
-                           , Font.alignRight
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , scale 1.5
-                               , moveLeft 150
-                               , Background.color grey
-                               , Border.rounded 5
-                               , padding 5
-                               ]
-                               { src = playerCharImgPath player0
-                               , description = player0.rollbackCode
-                               }
-                           , spacing 15
+          [ renderStatColumn [ Font.color white
+                             , Font.alignRight
+                             , behindContent <| image
+                                 [ centerX
+                                 , centerY
+                                 , scale 1.5
+                                 , moveLeft 150
+                                 , Background.color grey
+                                 , Border.rounded 5
+                                 , padding 5
+                                 , above <| el
+                                     [ centerX
+                                     , Font.extraBold
+                                     , scale 0.75
+                                     ]
+                                     (text <| renderPlayerName player0)
+                                 ]
+                                   { src = playerCharImgPath player0
+                                   , description = player0.rollbackCode
+                                   }
+                             , spacing 15
                            ]
               (listifyPlayerStat <| get 0 stats.playerStats)
         , renderStatColumn [ Font.color white
@@ -229,6 +207,12 @@ viewStats stats =
                                , Background.color grey
                                , Border.rounded 5
                                , padding 5
+                               , above <| el
+                                   [ centerX
+                                   , Font.extraBold
+                                   , scale 0.75
+                                   ]
+                                   (text <| renderPlayerName player1)
                                ]
                                { src = playerCharImgPath player1
                                , description = player1.rollbackCode
