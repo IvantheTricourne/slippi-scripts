@@ -12,6 +12,8 @@ import Element.Input as Input
 import File as File exposing (File)
 import File.Select as Select
 import Html exposing (Html)
+import Html.Events exposing (preventDefaultOn)
+import Http as Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe
@@ -60,12 +62,55 @@ type Msg
     | JsonRequested
     | JsonSelected File
     | JsonLoaded String
+    | FilesRequested
+    | FilesSelected File (List File)
+    | FilesLoaded String
+    | GotFiles File (List File)
+    | Uploaded (Result Http.Error Stats)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
             ( Nothing
+            , Cmd.none
+            )
+        GotFiles file files ->
+            ( model -- Uploading 0
+            , Http.request
+                  { method = "POST"
+                  , url = "http://localhost:5000/"
+                  , headers = []
+                  , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
+                  , expect = Http.expectJson Uploaded statsDecoder
+                  , timeout = Nothing
+                  , tracker = Just "upload"
+                  }
+            )
+        Uploaded result ->
+            case result of
+                Ok stats -> (Just stats, Cmd.none)
+                Err _ -> (Nothing, Cmd.none)
+        FilesRequested ->
+            ( model
+            , Select.files [ "*" ] FilesSelected
+            )
+        FilesSelected file files ->
+            ( model
+            , Http.request
+                  { method = "POST"
+                  , url = "http://localhost:5000/"
+                  , headers = []
+                  , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
+                  , expect = Http.expectJson Uploaded statsDecoder
+                  , timeout = Nothing
+                  , tracker = Just "upload"
+                  }
+            )
+        FilesLoaded str ->
+            ( case D.decodeString statsDecoder str of
+                  Ok stats -> Just stats
+                  Err _ -> Nothing
             , Cmd.none
             )
         JsonRequested ->
@@ -98,6 +143,7 @@ view model =
     column [ centerX
            , centerY
            , spacing 10
+           , htmlAttribute <| hijackOn "drop" dropDecoder
            ]
     (case model of
          Nothing -> viewInit
@@ -205,20 +251,38 @@ viewStats stats =
     , renderStageImgsWithWinner (toList stats.stages) (toList stats.wins)
     ]
 viewInit =
-    [ image [ centerX
-            , Element.mouseOver [ Background.color cyan
-                                ]
-            , padding 2
-            , Border.rounded 5
-            , Events.onClick JsonRequested
-            , below <| el
-                [ Font.color white
-                , centerX
-                ] (text "stats")
-            ]
-          { src = "rsrc/Characters/Saga Icons/Smash.png"
-          , description = "Logo for set winner"
-          }
+    [ row [ spacing 50
+          ]
+          [ image [ centerX
+                  , Element.mouseOver [ Background.color cyan
+                                      ]
+                  , padding 2
+                  , Border.rounded 5
+                  , Events.onClick JsonRequested
+                  , below <| el
+                      [ Font.color white
+                      , centerX
+                      ] (text "Stats File")
+                  ]
+                { src = "rsrc/Characters/Saga Icons/Smash.png"
+                , description = "Smash Logo Button"
+                }
+          -- @TODO: once the webserver is done, uncomment this
+          -- , image [ centerX
+          --         , Element.mouseOver [ Background.color cyan
+          --                             ]
+          --         , padding 2
+          --         , Border.rounded 5
+          --         , Events.onClick FilesRequested
+          --         , below <| el
+          --             [ Font.color white
+          --             , centerX
+          --             ] (text "Slippi Files")
+          --         ]
+          -- { src = "rsrc/Characters/Saga Icons/Smash.png"
+          -- , description = "Smash Logo Button"
+          -- }
+          ]
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List String
@@ -411,6 +475,19 @@ playerDecoder =
         (D.field "characterName" D.string)
         (D.field "color" D.string)
         (D.field "idx" D.int)
+
+-- file drops
+dropDecoder : D.Decoder Msg
+dropDecoder =
+  D.at ["dataTransfer","files"] (D.oneOrMore GotFiles File.decoder)
+
+hijackOn : String -> D.Decoder msg -> Html.Attribute msg
+hijackOn event hijackDecoder =
+  preventDefaultOn event (D.map hijack hijackDecoder)
+
+hijack : msg -> (msg, Bool)
+hijack msg =
+  (msg, True)
 
 -- default player for handling maybes
 defaultPlayer : Player
