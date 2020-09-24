@@ -106,13 +106,27 @@ const characterSagaDict = {
 function getSagaIconName(statsJson) {
     let player0Kills = statsJson.playerStats[0].kills;
     let player1Kills = statsJson.playerStats[1].kills;
-    // determine who had the most kill
-    if (player0Kills > player1Kills) {
+    let player0Wins = 0;
+    let player1Wins = 0;
+    _.each(statsJson.wins, (player, i) => {
+        if (player.idx === 0) {
+            player0Wins += 1;
+        } else {
+            player1Wins += 1;
+        }
+    });
+    console.log(`Set win count: P0 ${player0Wins} - P1 ${player1Wins}`);
+    if (player0Wins > player1Wins) {
+        return characterSagaDict[statsJson.players[0].characterName];
+    } else if (player1Wins > player0Wins) {
+        return characterSagaDict[statsJson.players[1].characterName];
+    } else if (player0Kills > player1Kills) {  // determine who had the most kills
         return characterSagaDict[statsJson.players[0].characterName];
     } else if (player1Kills > player0Kills) {
         return characterSagaDict[statsJson.players[1].characterName];
     } else {
         // return the smash logo when its a tie/indeterminate
+        console.log("Set winner indeterminate!");
         return "Smash";
     }
 }
