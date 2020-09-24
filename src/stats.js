@@ -108,14 +108,14 @@ function getSagaIconName(statsJson) {
     let player1Kills = statsJson.playerStats[1].kills;
     let player0Wins = 0;
     let player1Wins = 0;
-    _.each(statsJson.wins, (player, i) => {
+    _.each(statsJson.games, (game, i) => {
+        let player = game.winner;
         if (player.idx === 0) {
             player0Wins += 1;
         } else {
             player1Wins += 1;
         }
     });
-    console.log(`Set win count: P0 ${player0Wins} - P1 ${player1Wins}`);
     if (player0Wins > player1Wins) {
         return characterSagaDict[statsJson.players[0].characterName];
     } else if (player1Wins > player0Wins) {
@@ -237,7 +237,9 @@ function getStats(files, players = []) {
             });
             // track stages, winner, total games and set length
             statsJson.games.push({ stage: slp.stages.getStageName(settings.stageId),
-                                   winner: getGameWinner(game, player0Info, player1Info)
+                                   winner: getGameWinner(game, player0Info, player1Info),
+                                   // @NOTE: this field is not used by the frontend (yet)
+                                   date: gameDate
                                  });
             statsJson.totalGames += 1;
             statsJson.totalLengthSeconds += paddedGameLength;
@@ -246,9 +248,11 @@ function getStats(files, players = []) {
             console.log(`File ${i+1} | Error processing ${file}`);
         }
     });
+    // sort games in case files were uploaded out of order
+    statsJson.games.sort((a,b) => a.date - b.date);
     // warn if no games were found
     if (statsJson.totalGames === 0) {
-        console.log("WARNING: No games found!");
+        console.log("WARNING: No valid games found!");
     } else {
         console.log(`Found ${statsJson.totalGames} games.`);
     }
