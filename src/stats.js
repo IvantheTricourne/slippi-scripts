@@ -137,8 +137,7 @@ function getStats(files, players = []) {
     var currPlayers = null;
     var statsJson = {
         "totalGames": 0,
-        "stages": [],
-        "wins": [],
+        "games": [],
         "totalLengthSeconds": 0,
         "players": null,
         "playerStats": [
@@ -237,8 +236,9 @@ function getStats(files, players = []) {
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
             });
             // track stages, winner, total games and set length
-            statsJson.stages.push(slp.stages.getStageName(settings.stageId));
-            statsJson.wins.push(getGameWinner(game, player0Info, player1Info));
+            statsJson.games.push({ stage: slp.stages.getStageName(settings.stageId),
+                                   winner: getGameWinner(game, player0Info, player1Info)
+                                 });
             statsJson.totalGames += 1;
             statsJson.totalLengthSeconds += paddedGameLength;
         } catch (err) {

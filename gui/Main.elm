@@ -24,12 +24,15 @@ import Task
 type alias Model = Maybe Stats
 type alias Stats =
     { totalGames : Int
-    , wins : Array Player
-    , stages : Array String
+    , games : Array Game
     , totalLengthSeconds : Float
     , players : Array Player
     , playerStats : Array PlayerStat
     , sagaIcon : String
+    }
+type alias Game =
+    { stage : String
+    , winner : Player
     }
 type alias Player =
     { playerPort : Int
@@ -62,7 +65,8 @@ type Msg
     | FilesRequested
     | FilesSelected File (List File)
     | FilesLoaded String
-    | GotFiles File (List File)
+    -- @TODO: uncomment this once drag and drop works
+    -- | GotFiles File (List File)
     | Uploaded (Result Http.Error Stats)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -72,18 +76,19 @@ update msg model =
             ( Nothing
             , Cmd.none
             )
-        GotFiles file files ->
-            ( model -- Uploading 0
-            , Http.request
-                  { method = "POST"
-                  , url = "http://localhost:5000/"
-                  , headers = []
-                  , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
-                  , expect = Http.expectJson Uploaded statsDecoder
-                  , timeout = Nothing
-                  , tracker = Just "upload"
-                  }
-            )
+        -- @TODO: uncomment this once drag and drop works
+        -- GotFiles file files ->
+        --     ( model -- Uploading 0
+        --     , Http.request
+        --           { method = "POST"
+        --           , url = "http://localhost:5000/"
+        --           , headers = []
+        --           , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
+        --           , expect = Http.expectJson Uploaded statsDecoder
+        --           , timeout = Nothing
+        --           , tracker = Just "upload"
+        --           }
+        --     )
         Uploaded result ->
             case result of
                 Ok stats -> (Just stats, Cmd.none)
@@ -127,7 +132,7 @@ view model =
     column [ centerX
            , centerY
            , spacing 10
-           , htmlAttribute <| hijackOn "drop" dropDecoder
+           -- , htmlAttribute <| hijackOn "drop" dropDecoder
            ]
     (case model of
          Nothing -> viewInit
@@ -232,7 +237,7 @@ viewStats stats =
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
-    , renderStageImgsWithWinner (toList stats.stages) (toList stats.wins)
+    , renderStageImgsWithWinner (toList stats.games)
     ]
 viewInit =
     [ image [ centerX
@@ -270,15 +275,15 @@ listifyPlayerStat mStat =
               in killMoveName ++ " (" ++ String.fromInt timesUsed ++ ")"
             ]
 
-renderStageImgsWithWinner stages wins =
+renderStageImgsWithWinner games =
     row [ Background.color black
         , Border.rounded 5
         , spacing 15
         , padding 10
         , centerX
         ] <|
-        List.map2
-            (\stageName winnerInfo ->
+        List.map
+            (\gameInfo ->
                  image [ Background.color white
                        , Border.rounded 3
                        , scale 1.1
@@ -287,14 +292,14 @@ renderStageImgsWithWinner stages wins =
                            [ centerX
                            , padding 5
                            ]
-                           { src = playerCharIconPath winnerInfo
-                           , description = renderPlayerName winnerInfo
+                           { src = playerCharIconPath gameInfo.winner
+                           , description = renderPlayerName gameInfo.winner
                            }
                        ]
-                 { src = stageImgPath stageName
-                 , description = stageName
+                 { src = stageImgPath gameInfo.stage
+                 , description = gameInfo.stage
                  })
-            stages wins
+            games
 
 renderWinImgs wins =
     row [ Background.color grey
@@ -376,13 +381,19 @@ encode model =
         Just stats ->
             E.object
                 [ ("totalGames", E.int stats.totalGames)
-                , ("wins", E.array playerEncoder stats.wins)
-                , ("stages", E.array E.string stats.stages)
+                , ("games", E.array gameEncoder stats.games)
                 , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
                 , ("players", E.array playerEncoder stats.players)
                 , ("playerStats", E.array playerStatEncoder stats.playerStats)
                 , ("sagaIcon" , E.string stats.sagaIcon)
                 ]
+
+gameEncoder : Game -> E.Value
+gameEncoder game =
+    E.object
+        [ ("stage", E.string game.stage)
+        , ("winner", playerEncoder game.winner)
+        ]
 
 playerEncoder : Player -> E.Value
 playerEncoder player =
@@ -421,15 +432,19 @@ decoder = D.nullable statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =
-  D.map7 Stats
+  D.map6 Stats
     (D.field "totalGames" D.int)
-    (D.field "wins" <| D.array playerDecoder)
-    (D.field "stages" <| D.array D.string)
+    (D.field "games" <| D.array gameDecoder)
     (D.field "totalLengthSeconds" D.float)
     (D.field "players" <| D.array playerDecoder)
     (D.field "playerStats" <| D.array playerStatDecoder)
     (D.field "sagaIcon" <| D.string)
 
+gameDecoder : D.Decoder Game
+gameDecoder =
+    D.map2 Game
+        (D.field "stage" D.string)
+        (D.field "winner" playerDecoder)
 
 playerDecoder : D.Decoder Player
 playerDecoder =
@@ -442,18 +457,18 @@ playerDecoder =
         (D.field "color" D.string)
         (D.field "idx" D.int)
 
--- file drops
-dropDecoder : D.Decoder Msg
-dropDecoder =
-  D.at ["dataTransfer","files"] (D.oneOrMore GotFiles File.decoder)
+-- -- file drops
+-- dropDecoder : D.Decoder Msg
+-- dropDecoder =
+--   D.at ["dataTransfer","files"] (D.oneOrMore GotFiles File.decoder)
 
-hijackOn : String -> D.Decoder msg -> Html.Attribute msg
-hijackOn event hijackDecoder =
-  preventDefaultOn event (D.map hijack hijackDecoder)
+-- hijackOn : String -> D.Decoder msg -> Html.Attribute msg
+-- hijackOn event hijackDecoder =
+--   preventDefaultOn event (D.map hijack hijackDecoder)
 
-hijack : msg -> (msg, Bool)
-hijack msg =
-  (msg, True)
+-- hijack : msg -> (msg, Bool)
+-- hijack msg =
+--   (msg, True)
 
 -- default player for handling maybes
 defaultPlayer : Player
