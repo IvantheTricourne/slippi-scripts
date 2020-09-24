@@ -150,6 +150,7 @@ viewStats stats =
             , Border.rounded 5
             , Events.onClick Reset
             , scale 1.25
+            , moveDown 10
             ]
           { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
           , description = "Logo for set winner"
@@ -173,13 +174,13 @@ viewStats stats =
                                      , Font.extraBold
                                      , scale 0.75
                                      ]
-                                     (text <| renderPlayerName player0)
+                                       (text <| renderPlayerName player0)
                                  ]
                                    { src = playerCharImgPath player0
-                                   , description = player0.rollbackCode
+                                   , description = renderPlayerName player0
                                    }
                              , spacing 15
-                           ]
+                             ]
               (listifyPlayerStat <| get 0 stats.playerStats)
         , renderStatColumn [ Font.color white
                            , Font.center
@@ -212,11 +213,30 @@ viewStats stats =
                                    , Font.extraBold
                                    , scale 0.75
                                    ]
-                                   (text <| renderPlayerName player1)
+                                     (text <| renderPlayerName player1)
+                               -- @NOTE: this might be how secondaries are handled
+                               -- @TODO: update backend to push char changes
+                               -- , below <| row
+                               --     [ centerX
+                               --     , spacing 5
+                               --     , moveDown 5
+                               --     , scale 0.8
+                               --     ]
+                               --     [ image
+                               --           []
+                               --           { src = "rsrc/Characters/Stock Icons/" ++ "Marth" ++ "/" ++ "Black" ++ ".png"
+                               --           , description = ""
+                               --           }
+                               --     , image
+                               --           []
+                               --           { src = "rsrc/Characters/Stock Icons/" ++ "Jigglypuff" ++ "/" ++ "Headband" ++ ".png"
+                               --           , description = ""
+                               --           }
+                               --     ]
                                ]
-                               { src = playerCharImgPath player1
-                               , description = player1.rollbackCode
-                               }
+                                 { src = playerCharImgPath player1
+                                 , description = renderPlayerName player1
+                                 }
                            , spacing 15
                            ]
             (listifyPlayerStat <| get 1 stats.playerStats)
@@ -284,23 +304,6 @@ renderStageImgsWithWinner games =
                  , description = gameInfo.stage
                  })
             games
-
-renderWinImgs wins =
-    row [ Background.color grey
-        , Border.rounded 5
-        , spacing 15
-        , padding 10
-        , centerX
-        ] <|
-        List.indexedMap
-            (\i winnerInfo -> image [ Border.rounded 3
-                                    , scale 1.1
-                                    , padding 1
-                                    ]
-                 { src = playerCharIconPath winnerInfo
-                 , description = renderPlayerName winnerInfo
-                 })
-            wins
 
 renderStatColumn styles strings =
     Element.indexedTable styles
