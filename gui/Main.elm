@@ -59,9 +59,6 @@ type alias FavoriteMove =
 
 type Msg
     = Reset
-    | JsonRequested
-    | JsonSelected File
-    | JsonLoaded String
     | FilesRequested
     | FilesSelected File (List File)
     | FilesLoaded String
@@ -99,9 +96,9 @@ update msg model =
             ( model
             , Http.request
                   { method = "POST"
-                  , url = "http://localhost:5000/"
+                  , url = "http://localhost:8080/stats/upload"
                   , headers = []
-                  , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
+                  , body = Http.multipartBody (List.map (Http.filePart "multipleFiles") (file::files))
                   , expect = Http.expectJson Uploaded statsDecoder
                   , timeout = Nothing
                   , tracker = Just "upload"
@@ -113,20 +110,7 @@ update msg model =
                   Err _ -> Nothing
             , Cmd.none
             )
-        JsonRequested ->
-            ( model
-            , Select.file [ "application/json" ] JsonSelected
-            )
-        JsonSelected file ->
-            ( model
-            , Task.perform JsonLoaded (File.toString file)
-            )
-        JsonLoaded str ->
-            ( case D.decodeString statsDecoder str of
-                  Ok stats -> Just stats
-                  Err _ -> Nothing
-            , Cmd.none
-            )
+
 
 -- view
 -- @TODO: clean up styles
@@ -251,38 +235,20 @@ viewStats stats =
     , renderStageImgsWithWinner (toList stats.stages) (toList stats.wins)
     ]
 viewInit =
-    [ row [ spacing 50
-          ]
-          [ image [ centerX
-                  , Element.mouseOver [ Background.color cyan
-                                      ]
-                  , padding 2
-                  , Border.rounded 5
-                  , Events.onClick JsonRequested
-                  , below <| el
-                      [ Font.color white
-                      , centerX
-                      ] (text "Stats File")
-                  ]
-                { src = "rsrc/Characters/Saga Icons/Smash.png"
-                , description = "Smash Logo Button"
-                }
-          -- @TODO: once the webserver is done, uncomment this
-          -- , image [ centerX
-          --         , Element.mouseOver [ Background.color cyan
-          --                             ]
-          --         , padding 2
-          --         , Border.rounded 5
-          --         , Events.onClick FilesRequested
-          --         , below <| el
-          --             [ Font.color white
-          --             , centerX
-          --             ] (text "Slippi Files")
-          --         ]
-          -- { src = "rsrc/Characters/Saga Icons/Smash.png"
-          -- , description = "Smash Logo Button"
-          -- }
-          ]
+    [ image [ centerX
+            , Element.mouseOver [ Background.color cyan
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <| el
+                [ Font.color white
+                , centerX
+                ] (text "Slippi Files")
+            ]
+          { src = "rsrc/Characters/Saga Icons/Smash.png"
+          , description = "Smash Logo Button"
+         }
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List String
