@@ -131,43 +131,43 @@ function getSagaIconName(statsJson) {
     }
 }
 
-var player0Info = {};
-var player1Info = {};
-var currPlayers = null;
-var statsJson = {
-    "totalGames": 0,
-    "stages": [],
-    "wins": [],
-    "totalLengthSeconds": 0,
-    "players": null,
-    "playerStats": [
-        { "totalDamage": 0,
-          "neutralWins": 0,
-          "counterHits": 0,
-          "kills": 0
-        },
-        { "totalDamage": 0,
-          "neutralWins": 0,
-          "counterHits": 0,
-          "kills": 0
-        }
-    ]
-};
-var playerTotals = [
-    { "apms": 0,
-      "openingsPerKills": 0,
-      "damagePerOpenings": 0,
-      "moves": [],
-      "killMoves": []
-    },
-    { "apms": 0,
-      "openingsPerKills": 0,
-      "damagePerOpenings": 0,
-      "moves": [],
-      "killMoves": []
-    }
-];
 function getStats(files, players = []) {
+    var player0Info = {};
+    var player1Info = {};
+    var currPlayers = null;
+    var statsJson = {
+        "totalGames": 0,
+        "stages": [],
+        "wins": [],
+        "totalLengthSeconds": 0,
+        "players": null,
+        "playerStats": [
+            { "totalDamage": 0,
+              "neutralWins": 0,
+              "counterHits": 0,
+              "kills": 0
+            },
+            { "totalDamage": 0,
+              "neutralWins": 0,
+              "counterHits": 0,
+              "kills": 0
+            }
+        ]
+    };
+    var playerTotals = [
+        { "apms": 0,
+          "openingsPerKills": 0,
+          "damagePerOpenings": 0,
+          "moves": [],
+          "killMoves": []
+        },
+        { "apms": 0,
+          "openingsPerKills": 0,
+          "damagePerOpenings": 0,
+          "moves": [],
+          "killMoves": []
+        }
+    ];
     _.each(files, (file, i) => {
         try {
             const game = new SlippiGame(file);
