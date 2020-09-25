@@ -120,7 +120,7 @@ httpErrToJsonErr httpErr =
         Http.Timeout -> D.Failure "Timeout" (E.object [("msg", E.string "response timeout")])
         Http.NetworkError -> D.Failure "NetworkError" (E.object [("msg", E.string "network error")])
         Http.BadStatus int -> D.Failure "Bad Status" (E.object [("msg", E.string "Bad Status")])
-        Http.BadBody str -> D.Failure "Bad Body" (E.object [("msg", E.string "Bad body")])
+        Http.BadBody str -> D.Failure "Bad Body" (E.string str)
 
 -- view
 -- @TODO: clean up styles
@@ -341,7 +341,7 @@ renderStageImgsWithWinner games =
         , spacing 15
         , padding 10
         , centerX
-        , moveDown 20
+        , moveDown 25
         ] <|
         List.indexedMap
             (\i gameInfo ->
@@ -503,9 +503,6 @@ favoriteMoveEncoder favMov =
         [ ("moveName", E.string favMov.moveName)
         , ("timesUsed", E.int favMov.timesUsed)
         ]
-
--- decoder : D.Decoder Model
--- decoder = statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =

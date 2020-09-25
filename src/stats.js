@@ -16,7 +16,12 @@ function makePlayerInfo(idx, settings, metadata) {
             characterName: slp.characters.getCharacterName(player.characterId),
             color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
         },
-        secondaries: [],
+        secondaries: [
+            {
+                characterName: slp.characters.getCharacterName(player.characterId),
+                color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
+            }
+        ],
         idx: idx
     };
 }
@@ -44,8 +49,11 @@ function getGameWinner(game, player0, player1) {
         tag: "",
         netplayName: "No Name",
         rollbackCode: "n/a",
-      	characterName: "Wireframe",
-      	color: "Default",
+      	main: {
+            characterName: "Wireframe",
+            color: "Default"
+        },
+      	secondaries: [],
         idx: 5
     };
     if (playerIsDead(player0Frame) && playerIsDead(player1Frame)) {
@@ -82,6 +90,32 @@ function getMostUsedMove(arr) {
              timesUsed: mf
            };
 }
+// get most used char
+function getMostUsedChar(arr) {
+    var mf = 1;
+    var m = 0;
+    var item;
+    if (arr.length === 1) {
+        return { character: arr[0],
+                 timesUsed: mf
+               };
+    }
+    for (var i=0; i<arr.length; i++) {
+        for (var j=i; j<arr.length; j++) {
+            if (_.isEqual(arr[i],arr[j]))
+                m++;
+            if (mf<m) {
+                mf=m;
+                item = arr[i];
+            }
+        }
+        m=0;
+    }
+    return { character: item,
+             timesUsed: mf
+           };
+}
+
 // associated saga icon / character
 const characterSagaDict = {
     "Fox": "Star Fox",
@@ -189,6 +223,7 @@ function getStats(files, players = []) {
             // filter out games by players
             let player0 = makePlayerInfo(0, settings, metadata);
             let player1 = makePlayerInfo(1, settings, metadata);
+            // purely for the script usage
             if (players.length !== 0) {
                 let namesLowercased = Object.values(players).map(x => x.toLowerCase());
                 ({tag, netplayName, rollbackCode} = player0);
@@ -276,22 +311,19 @@ function getStats(files, players = []) {
     }
     // sort games in case files were uploaded out of order
     statsJson.games.sort((a,b) => a.date - b.date);
-    // console.log(JSON.stringify(statsJson.games, null, 2));
+    console.log(JSON.stringify(statsJson.games, null, 2));
     // write player info
     statsJson.players = [player0Info, player1Info];
-    // uniquify secondaries lists
+    // uniquify secondaries lists + determine main
     _.each(statsJson.players, (player, i) => {
+        // player.main = getMostUsedChar(player.secondaries).character;
         player.secondaries = _.uniqWith(player.secondaries, _.isEqual);
+        // if secondary is the same as main, get rid of it
+        if (player.secondaries.length === 1 && _.isEqual(player.secondaries[0], player.main)) {
+            player.secondaries = [];
+        }
     });
-    // console.log(JSON.stringify(statsJson.players, null, 2));
-    // // set characters to first character played for each player
-    // let firstGame = statsJson.games[0];
-    // // console.log(JSON.stringify(firstGame, null, 2));
-    // statsJson.players[0].characterName = firstGame.players[0].characterName;
-    // statsJson.players[0].color = firstGame.players[0].color;
-    // statsJson.players[1].characterName = firstGame.players[1].characterName;
-    // statsJson.players[1].color = firstGame.players[1].color;
-    // console.log(JSON.stringify(statsJson.players, null, 2));
+    console.log(JSON.stringify(statsJson.games, null, 2));
     // determine which saga icon to use
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
@@ -304,7 +336,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
-    // console.log(JSON.stringify(statsJson, null, 2));
+    //console.log(JSON.stringify(statsJson, null, 2));
     return statsJson;
 }
 exports.getStats = getStats;
