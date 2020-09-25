@@ -345,7 +345,7 @@ stageImgPath stageName =
 
 -- elements
 black = rgb255 0 0 0
-white = rgb255 255 255 255
+white = rgb255 238 236 229
 grey = rgb255 25 25 25
 red = rgb255 255 0 0
 cyan = rgb255 175 238 238
