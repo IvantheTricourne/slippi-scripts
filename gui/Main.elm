@@ -2,7 +2,6 @@ port module Main exposing (..)
 
 import Array exposing (..)
 import Browser
-import Bytes exposing (Bytes)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -17,11 +16,10 @@ import Http as Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe
-import Task
 
 -- model
 
-type alias Model = Maybe Stats
+type alias Model = Result D.Error Stats
 type alias Stats =
     { totalGames : Int
     , games : Array Game
@@ -33,14 +31,19 @@ type alias Stats =
 type alias Game =
     { stage : String
     , winner : Player
+    , players : Array Player
+    }
+type alias Character =
+    { characterName : String
+    , color : String
     }
 type alias Player =
     { playerPort : Int
     , tag : String
     , netplayName : String
     , rollbackCode : String
-    , characterName : String
-    , color : String
+    , main : Character
+    , secondaries : Array Character
     , idx : Int
     }
 type alias PlayerStat =
@@ -67,7 +70,6 @@ type Msg
     = Reset
     | FilesRequested
     | FilesSelected File (List File)
-    | FilesLoaded String
     -- @TODO: uncomment this once drag and drop works
     -- | GotFiles File (List File)
     | Uploaded (Result Http.Error Stats)
@@ -76,7 +78,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            ( Nothing
+            ( Err <| D.Failure "" (E.object [])
             , Cmd.none
             )
         -- @TODO: uncomment this once drag and drop works
@@ -94,8 +96,8 @@ update msg model =
         --     )
         Uploaded result ->
             case result of
-                Ok stats -> (Just stats, Cmd.none)
-                Err _ -> (Nothing, Cmd.none)
+                Ok stats -> (Ok stats, Cmd.none)
+                Err err -> (Err <| httpErrToJsonErr err, Cmd.none)
         FilesRequested ->
             ( model
             , Select.files [ "*" ] FilesSelected
@@ -112,13 +114,15 @@ update msg model =
                   , tracker = Just "upload"
                   }
             )
-        FilesLoaded str ->
-            ( case D.decodeString statsDecoder str of
-                  Ok stats -> Just stats
-                  Err _ -> Nothing
-            , Cmd.none
-            )
 
+httpErrToJsonErr : Http.Error -> D.Error
+httpErrToJsonErr httpErr =
+    case httpErr of
+        Http.BadUrl str -> D.Failure "BadUrl" (E.object [("msg", E.string str)])
+        Http.Timeout -> D.Failure "Timeout" (E.object [("msg", E.string "response timeout")])
+        Http.NetworkError -> D.Failure "NetworkError" (E.object [("msg", E.string "network error")])
+        Http.BadStatus int -> D.Failure "Bad Status" (E.object [("msg", E.string "Bad Status")])
+        Http.BadBody str -> D.Failure "Bad Body" (E.object [("msg", E.string "Bad body")])
 
 -- view
 -- @TODO: clean up styles
@@ -138,8 +142,8 @@ view model =
            -- , htmlAttribute <| hijackOn "drop" dropDecoder
            ]
     (case model of
-         Nothing -> viewInit
-         Just stats -> viewStats stats)
+         Err err -> viewInit err
+         Ok stats -> viewStats stats)
 
 viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
@@ -179,8 +183,15 @@ viewStats stats =
                                      , scale 0.75
                                      ]
                                        (text <| renderPlayerName player0)
+                                 , onLeft <| renderSecondaries
+                                     [ centerX
+                                     , spacing 5
+                                     , moveDown 5
+                                     , scale 0.7
+                                     ]
+                                     player0
                                  ]
-                                   { src = playerCharImgPath player0
+                                   { src = charImgPath player0.main
                                    , description = renderPlayerName player0
                                    }
                              , spacing 15
@@ -225,27 +236,15 @@ viewStats stats =
                                      , scale 0.75
                                      ]
                                        (text <| renderPlayerName player1)
-                                 -- @NOTE: this might be how secondaries are handled
-                                 -- @TODO: update backend to push char changes
-                                 -- , below <| row
-                                 --     [ centerX
-                                 --     , spacing 5
-                                 --     , moveDown 5
-                                 --     , scale 0.8
-                                 --     ]
-                                 --     [ image
-                                 --           []
-                                 --           { src = "rsrc/Characters/Stock Icons/" ++ "Marth" ++ "/" ++ "Black" ++ ".png"
-                                 --           , description = ""
-                                 --           }
-                                 --     , image
-                                 --           []
-                                 --           { src = "rsrc/Characters/Stock Icons/" ++ "Jigglypuff" ++ "/" ++ "Headband" ++ ".png"
-                                 --           , description = ""
-                                 --           }
-                                 --     ]
+                                 , onRight <| renderSecondaries
+                                     [ centerX
+                                     , spacing 5
+                                     , moveDown 5
+                                     , scale 0.7
+                                     ]
+                                     player1
                                  ]
-                                   { src = playerCharImgPath player1
+                                   { src = charImgPath player1.main
                                    , description = renderPlayerName player1
                                    }
                            , spacing 15
@@ -261,7 +260,9 @@ viewStats stats =
         ]
     , renderStageImgsWithWinner (toList stats.games)
     ]
-viewInit =
+viewInit err =
+    let msg = D.errorToString err
+    in
     [ image [ centerX
             , Element.mouseOver [ Background.color cyan
                                 ]
@@ -276,6 +277,10 @@ viewInit =
           { src = "rsrc/Characters/Saga Icons/Smash.png"
           , description = "Smash Logo Button"
          }
+    -- -- @TODO: format this better somehow
+    -- , el [ Background.color white
+    --      , moveDown 50
+    --      ] (text msg)
     ]
 
 listifyPlayerStat : Maybe PlayerStat -> List CellValue
@@ -317,7 +322,7 @@ renderStageImgsWithWinner games =
                            [ centerX
                            , padding 5
                            ]
-                           { src = playerCharIconPath gameInfo.winner
+                           { src = charIconPath gameInfo.winner.main
                            , description = renderPlayerName gameInfo.winner
                            }
                        ]
@@ -347,18 +352,28 @@ renderStatColumn styles subStyles strings =
 renderPlayerName player =
     case player.rollbackCode of
         "n/a" -> case player.netplayName of
-                     "No Name" -> player.characterName
+                     "No Name" -> player.main.characterName
                      _ -> player.netplayName
         _ -> player.rollbackCode
 
--- @TODO: maybe move these all the node side
-playerCharImgPath : Player -> String
-playerCharImgPath player =
-    "rsrc/Characters/Portraits/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+renderSecondaries styles player =
+    column styles <|
+        List.map
+            (\secondary -> image
+                 []
+                 { src = charIconPath secondary
+                 , description = renderPlayerName player
+                 })
+            (List.reverse << toList <| player.secondaries)
 
-playerCharIconPath : Player -> String
-playerCharIconPath player =
-    "rsrc/Characters/Stock Icons/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+-- @TODO: maybe move these all the node side
+charImgPath : Character -> String
+charImgPath character =
+    "rsrc/Characters/Portraits/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
+
+charIconPath : Character -> String
+charIconPath character =
+    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
 
 stageImgPath : String -> String
 stageImgPath stageName =
@@ -392,8 +407,8 @@ updateWithStorage msg oldModel =
 encode : Model -> E.Value
 encode model =
     case model of
-        Nothing -> E.object []
-        Just stats ->
+        Err _ -> E.object []
+        Ok stats ->
             E.object
                 [ ("totalGames", E.int stats.totalGames)
                 , ("games", E.array gameEncoder stats.games)
@@ -408,6 +423,14 @@ gameEncoder game =
     E.object
         [ ("stage", E.string game.stage)
         , ("winner", playerEncoder game.winner)
+        , ("players", E.array playerEncoder game.players)
+        ]
+
+characterEncoder : Character -> E.Value
+characterEncoder character =
+    E.object
+        [ ("characterName", E.string character.characterName)
+        , ("color", E.string character.color)
         ]
 
 playerEncoder : Player -> E.Value
@@ -417,8 +440,8 @@ playerEncoder player =
         , ("tag", E.string player.tag)
         , ("netplayName", E.string player.netplayName)
         , ("rollbackCode", E.string player.rollbackCode)
-        , ("characterName", E.string player.characterName)
-        , ("color", E.string player.color)
+        , ("main", characterEncoder player.main)
+        , ("secondaries", E.array characterEncoder player.secondaries)
         , ("idx", E.int player.idx)
         ]
 
@@ -442,8 +465,8 @@ favoriteMoveEncoder favMov =
         , ("timesUsed", E.int favMov.timesUsed)
         ]
 
-decoder : D.Decoder Model
-decoder = D.nullable statsDecoder
+-- decoder : D.Decoder Model
+-- decoder = statsDecoder
 
 statsDecoder : D.Decoder Stats
 statsDecoder =
@@ -457,9 +480,16 @@ statsDecoder =
 
 gameDecoder : D.Decoder Game
 gameDecoder =
-    D.map2 Game
+    D.map3 Game
         (D.field "stage" D.string)
         (D.field "winner" playerDecoder)
+        (D.field "players" <| D.array playerDecoder)
+
+characterDecoder : D.Decoder Character
+characterDecoder =
+    D.map2 Character
+        (D.field "characterName" D.string)
+        (D.field "color" D.string)
 
 playerDecoder : D.Decoder Player
 playerDecoder =
@@ -468,8 +498,8 @@ playerDecoder =
         (D.field "tag" D.string)
         (D.field "netplayName" D.string)
         (D.field "rollbackCode" D.string)
-        (D.field "characterName" D.string)
-        (D.field "color" D.string)
+        (D.field "main" characterDecoder)
+        (D.field "secondaries" <| D.array characterDecoder)
         (D.field "idx" D.int)
 
 -- -- file drops
@@ -492,8 +522,11 @@ defaultPlayer =
     , tag = "XXXX"
     , netplayName = "n/a"
     , rollbackCode = "XXXX#YYYYY"
-    , characterName = "Sonic"
-    , color = "Emerald"
+    , main =
+          { characterName = "Sonic"
+          , color = "Emerald"
+          }
+    , secondaries = fromList []
     , idx = 5
     }
 
@@ -523,9 +556,7 @@ subscriptions _ = Sub.none
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue decoder flags of
-          Ok model -> model
-          Err _ -> Nothing
+    ( D.decodeValue statsDecoder flags
     , Cmd.none
     )
 

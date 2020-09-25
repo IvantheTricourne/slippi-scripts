@@ -12,10 +12,18 @@ function makePlayerInfo(idx, settings, metadata) {
         tag: player.nametag,
         netplayName: _.get(metadata, ["players", idx, "names", "netplay"], null) || "No Name",
         rollbackCode: _.get(metadata, ["players", idx, "names", "code"], null) || "n/a",
-      	characterName: slp.characters.getCharacterName(player.characterId),
-      	color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
+        main: {
+            characterName: slp.characters.getCharacterName(player.characterId),
+            color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
+        },
+        secondaries: [],
         idx: idx
     };
+}
+// determine if player swapped chars/colors
+function playerSwitchedChars(currPlayer, newPlayer) {
+    return (currPlayer.main.characterName !== newPlayer.main.characterName ||
+            currPlayer.main.color !== newPlayer.main.color);
 }
 // determine if action state represents player in dead state
 const deadStates = [ 0x000, 0x001, 0x002, 0x003, 0x004, 0x005,
@@ -117,13 +125,13 @@ function getSagaIconName(statsJson) {
         }
     });
     if (player0Wins > player1Wins) {
-        return characterSagaDict[statsJson.players[0].characterName];
+        return characterSagaDict[statsJson.players[0].main.characterName];
     } else if (player1Wins > player0Wins) {
-        return characterSagaDict[statsJson.players[1].characterName];
+        return characterSagaDict[statsJson.players[1].main.characterName];
     } else if (player0Kills > player1Kills) {  // determine who had the most kills
-        return characterSagaDict[statsJson.players[0].characterName];
+        return characterSagaDict[statsJson.players[0].main.characterName];
     } else if (player1Kills > player0Kills) {
-        return characterSagaDict[statsJson.players[1].characterName];
+        return characterSagaDict[statsJson.players[1].main.characterName];
     } else {
         // return the smash logo when its a tie/indeterminate
         console.log("Set winner indeterminate!");
@@ -193,13 +201,7 @@ function getStats(files, players = []) {
                     !player1Ids.some(x => namesLowercased.includes(x))) {
                     console.log(`File ${i+1} | Game excluded: No id from list [${players}] found`);
                     return;
-                } else {
-                    player0Info = player0;
-                    player1Info = player1;
                 }
-            } else {
-                player0Info = player0;
-                player1Info = player1;
             }
             // Get stats after filtering is done (bc it slows things down a lot)
             const stats = game.getStats();
@@ -211,6 +213,23 @@ function getStats(files, players = []) {
             if (gameLength < 60 && totalKills < 3) {
                 console.log(`File ${i+1} | Game excluded: <60secs + <3 kills`);
                 return;
+            }
+            // write first player info
+            if (player0Info.main === undefined) {
+                player0Info = player0;
+                player1Info = player1;
+            } else {
+                // push secondary info if there is any change in chars
+                if (playerSwitchedChars(player0Info, player0)) {
+                    player0Info.secondaries.push({ characterName: player0.main.characterName,
+                                                   color: player0.main.color
+                                                 });
+                }
+                if (playerSwitchedChars(player1Info, player1)) {
+                    player1Info.secondaries.push({ characterName: player1.main.characterName,
+                                                   color: player1.main.color
+                                                 });
+                }
             }
             // get moves from conversions and combos
             _.each(stats.combos.concat(stats.conversions), (combo, i) => {
@@ -237,7 +256,8 @@ function getStats(files, players = []) {
             });
             // track stages, winner, total games and set length
             statsJson.games.push({ stage: slp.stages.getStageName(settings.stageId),
-                                   winner: getGameWinner(game, player0Info, player1Info),
+                                   winner: getGameWinner(game, player0, player1),
+                                   players: [player0, player1],
                                    // @NOTE: this field is not used by the frontend (yet)
                                    date: gameDate
                                  });
@@ -248,16 +268,30 @@ function getStats(files, players = []) {
             console.log(`File ${i+1} | Error processing ${file}`);
         }
     });
-    // sort games in case files were uploaded out of order
-    statsJson.games.sort((a,b) => a.date - b.date);
     // warn if no games were found
     if (statsJson.totalGames === 0) {
         console.log("WARNING: No valid games found!");
     } else {
         console.log(`Found ${statsJson.totalGames} games.`);
     }
+    // sort games in case files were uploaded out of order
+    statsJson.games.sort((a,b) => a.date - b.date);
+    // console.log(JSON.stringify(statsJson.games, null, 2));
     // write player info
     statsJson.players = [player0Info, player1Info];
+    // uniquify secondaries lists
+    _.each(statsJson.players, (player, i) => {
+        player.secondaries = _.uniqWith(player.secondaries, _.isEqual);
+    });
+    // console.log(JSON.stringify(statsJson.players, null, 2));
+    // // set characters to first character played for each player
+    // let firstGame = statsJson.games[0];
+    // // console.log(JSON.stringify(firstGame, null, 2));
+    // statsJson.players[0].characterName = firstGame.players[0].characterName;
+    // statsJson.players[0].color = firstGame.players[0].color;
+    // statsJson.players[1].characterName = firstGame.players[1].characterName;
+    // statsJson.players[1].color = firstGame.players[1].color;
+    // console.log(JSON.stringify(statsJson.players, null, 2));
     // determine which saga icon to use
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
@@ -270,6 +304,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
+    // console.log(JSON.stringify(statsJson, null, 2));
     return statsJson;
 }
 exports.getStats = getStats;
