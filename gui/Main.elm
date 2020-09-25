@@ -19,7 +19,12 @@ import Maybe
 
 -- model
 
-type alias Model = Result D.Error Stats
+-- type alias Model = Result D.Error Stats
+type Model
+  = Waiting
+  | Uploading Float
+  | Done Stats
+  | Fail D.Error
 type alias Stats =
     { totalGames : Int
     , games : Array Game
@@ -70,36 +75,29 @@ type Msg
     = Reset
     | FilesRequested
     | FilesSelected File (List File)
-    -- @TODO: uncomment this once drag and drop works
-    -- | GotFiles File (List File)
+    | GotProgress Http.Progress
     | Uploaded (Result Http.Error Stats)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            ( Err <| D.Failure "" (E.object [])
+            ( Waiting
             , Cmd.none
             )
-        -- @TODO: uncomment this once drag and drop works
-        -- GotFiles file files ->
-        --     ( model -- Uploading 0
-        --     , Http.request
-        --           { method = "POST"
-        --           , url = "http://localhost:5000/"
-        --           , headers = []
-        --           , body = Http.multipartBody (List.map (Http.filePart "files[]") (file::files))
-        --           , expect = Http.expectJson Uploaded statsDecoder
-        --           , timeout = Nothing
-        --           , tracker = Just "upload"
-        --           }
-        --     )
+        GotProgress progress ->
+            case progress of
+                Http.Sending p ->
+                    (Uploading (Http.fractionSent p), Cmd.none)
+
+                Http.Receiving _ ->
+                    (model, Cmd.none)
         Uploaded result ->
             case result of
-                Ok stats -> (Ok stats, Cmd.none)
-                Err err -> (Err <| httpErrToJsonErr err, Cmd.none)
+                Ok stats -> (Done stats, Cmd.none)
+                Err err -> (Fail <| httpErrToJsonErr err, Cmd.none)
         FilesRequested ->
-            ( model
+            ( Uploading 0
             , Select.files [ "*" ] FilesSelected
             )
         FilesSelected file files ->
@@ -139,11 +137,12 @@ view model =
     column [ centerX
            , centerY
            , spacing 10
-           -- , htmlAttribute <| hijackOn "drop" dropDecoder
            ]
     (case model of
-         Err err -> viewInit err
-         Ok stats -> viewStats stats)
+         Waiting -> viewInit
+         Fail err -> viewFail err
+         Uploading pct -> viewProgress pct
+         Done stats -> viewStats stats)
 
 viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
@@ -260,7 +259,23 @@ viewStats stats =
         ]
     , renderStageImgsWithWinner (toList stats.games)
     ]
-viewInit err =
+viewInit =
+    [ image [ centerX
+            , Element.mouseOver [ Background.color cyan
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <| el
+                [ Font.color white
+                , centerX
+                      ] (text "Slippi Files")
+            ]
+          { src = "rsrc/Characters/Saga Icons/Smash.png"
+          , description = "Smash Logo Button"
+          }
+    ]
+viewFail err =
     let msg = D.errorToString err
     in
     [ image [ centerX
@@ -277,11 +292,33 @@ viewInit err =
           { src = "rsrc/Characters/Saga Icons/Smash.png"
           , description = "Smash Logo Button"
          }
-    -- -- @TODO: format this better somehow
-    -- , el [ Background.color white
-    --      , moveDown 50
-    --      ] (text msg)
+    -- @TODO: format this better somehow
+    , el [ Background.color white
+         , moveDown 50
+         ] (text msg)
     ]
+viewProgress pct =
+    if pct > 0 then
+        [ image [ centerX
+                , Element.mouseOver [ Background.color cyan
+                                    ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick FilesRequested
+                , below <| el
+                    [ Font.color white
+                    , centerX
+                    ] (text "Slippi Files")
+                ]
+              { src = "rsrc/Characters/Saga Icons/Smash.png"
+              , description = "Smash Logo Button"
+              }
+        , el [ Font.color white
+             , centerX
+             , moveDown 50
+             ] (text (String.fromInt (round (100 * pct)) ++ "%"))
+        ]
+    else viewInit
 
 listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
@@ -407,8 +444,10 @@ updateWithStorage msg oldModel =
 encode : Model -> E.Value
 encode model =
     case model of
-        Err _ -> E.object []
-        Ok stats ->
+        Waiting -> E.object []
+        Uploading _ -> E.object []
+        Fail _ -> E.object []
+        Done stats ->
             E.object
                 [ ("totalGames", E.int stats.totalGames)
                 , ("games", E.array gameEncoder stats.games)
@@ -502,19 +541,6 @@ playerDecoder =
         (D.field "secondaries" <| D.array characterDecoder)
         (D.field "idx" D.int)
 
--- -- file drops
--- dropDecoder : D.Decoder Msg
--- dropDecoder =
---   D.at ["dataTransfer","files"] (D.oneOrMore GotFiles File.decoder)
-
--- hijackOn : String -> D.Decoder msg -> Html.Attribute msg
--- hijackOn event hijackDecoder =
---   preventDefaultOn event (D.map hijack hijackDecoder)
-
--- hijack : msg -> (msg, Bool)
--- hijack msg =
---   (msg, True)
-
 -- default player for handling maybes
 defaultPlayer : Player
 defaultPlayer =
@@ -550,13 +576,16 @@ favoriteMoveDecoder =
 
 -- subscriptions
 subscriptions : Model -> Sub Msg
-subscriptions _ = Sub.none
+subscriptions model =
+  Http.track "upload" GotProgress
 
 -- main
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( D.decodeValue statsDecoder flags
+    ( case D.decodeValue statsDecoder flags of
+          Err _ -> Waiting
+          Ok stats -> Done stats
     , Cmd.none
     )
 
