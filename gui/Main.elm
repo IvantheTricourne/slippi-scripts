@@ -57,6 +57,9 @@ type alias FavoriteMove =
     { moveName : String
     , timesUsed : Int
     }
+type CellValue
+    = Single String
+    | Dub (String, String)
 
 -- update
 
@@ -161,13 +164,14 @@ viewStats stats =
           ]
           [ renderStatColumn [ Font.color white
                              , Font.alignRight
-                             , behindContent <| image
+                             , onLeft <| image
                                  [ centerX
                                  , centerY
                                  , scale 1.5
-                                 , moveLeft 150
                                  , Background.color grey
                                  , Border.rounded 5
+                                 , moveRight 25
+                                 , moveDown 5
                                  , padding 5
                                  , above <| el
                                      [ centerX
@@ -181,64 +185,78 @@ viewStats stats =
                                    }
                              , spacing 15
                              ]
-              (listifyPlayerStat <| get 0 stats.playerStats)
-        , renderStatColumn [ Font.color white
-                           , Font.center
-                           , Font.bold
-                           , Font.italic
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveRight 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| get 0 stats.playerStats)
+          , renderStatColumn [ Font.color white
+                             , Font.center
+                             , Font.bold
+                             , Font.italic
+                             , spacing 15
+                             ]
+                []
+                [ Single "Total Damage"
+                , Single "Damage / Opening"
+                , Single "Openings / Kill"
+                , Single "Neutral Wins"
+                , Single "Counter Hits"
+                , Single "APM"
+                , Single "Favorite Move"
+                , Single "Favorite Kill Move"
+                ]
+          , renderStatColumn [ Font.color white
+                             , Font.alignLeft
+                             , onRight <| image
+                                 [ centerX
+                                 , centerY
+                                 , scale 1.5
+                                 , Background.color grey
+                                 , Border.rounded 5
+                                 , moveLeft 25
+                                 , moveDown 5
+                                 , padding 5
+                                 , above <| el
+                                     [ centerX
+                                     , Font.extraBold
+                                     , scale 0.75
+                                     ]
+                                       (text <| renderPlayerName player1)
+                                 -- @NOTE: this might be how secondaries are handled
+                                 -- @TODO: update backend to push char changes
+                                 -- , below <| row
+                                 --     [ centerX
+                                 --     , spacing 5
+                                 --     , moveDown 5
+                                 --     , scale 0.8
+                                 --     ]
+                                 --     [ image
+                                 --           []
+                                 --           { src = "rsrc/Characters/Stock Icons/" ++ "Marth" ++ "/" ++ "Black" ++ ".png"
+                                 --           , description = ""
+                                 --           }
+                                 --     , image
+                                 --           []
+                                 --           { src = "rsrc/Characters/Stock Icons/" ++ "Jigglypuff" ++ "/" ++ "Headband" ++ ".png"
+                                 --           , description = ""
+                                 --           }
+                                 --     ]
+                                 ]
+                                   { src = playerCharImgPath player1
+                                   , description = renderPlayerName player1
+                                   }
                            , spacing 15
                            ]
-            [ "Total Damage"
-            , "Damage / Opening"
-            , "Openings / Kill"
-            , "Neutral Wins"
-            , "Counter Hits"
-            , "APM"
-            , "Favorite Move"
-            , "Favorite Kill Move"
-            ]
-        , renderStatColumn [ Font.color white
-                           , Font.alignLeft
-                           , Font.glow black 1000
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , scale 1.5
-                               , moveRight 150
-                               , Background.color grey
-                               , Border.rounded 5
-                               , padding 5
-                               , above <| el
-                                   [ centerX
-                                   , Font.extraBold
-                                   , scale 0.75
-                                   ]
-                                     (text <| renderPlayerName player1)
-                               -- @NOTE: this might be how secondaries are handled
-                               -- @TODO: update backend to push char changes
-                               -- , below <| row
-                               --     [ centerX
-                               --     , spacing 5
-                               --     , moveDown 5
-                               --     , scale 0.8
-                               --     ]
-                               --     [ image
-                               --           []
-                               --           { src = "rsrc/Characters/Stock Icons/" ++ "Marth" ++ "/" ++ "Black" ++ ".png"
-                               --           , description = ""
-                               --           }
-                               --     , image
-                               --           []
-                               --           { src = "rsrc/Characters/Stock Icons/" ++ "Jigglypuff" ++ "/" ++ "Headband" ++ ".png"
-                               --           , description = ""
-                               --           }
-                               --     ]
-                               ]
-                                 { src = playerCharImgPath player1
-                                 , description = renderPlayerName player1
-                                 }
-                           , spacing 15
-                           ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveLeft 80
+                , moveUp 4
+                ]
+
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
     , renderStageImgsWithWinner (toList stats.games)
@@ -260,23 +278,19 @@ viewInit =
          }
     ]
 
-listifyPlayerStat : Maybe PlayerStat -> List String
+listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
     case mStat of
         Nothing -> []
         Just stat ->
-            [ String.fromInt << round <| stat.totalDamage
-            , String.fromInt << round <| stat.avgDamagePerOpening
-            , String.fromInt << round <| stat.avgOpeningsPerKill
-            , String.fromInt stat.neutralWins
-            , String.fromInt stat.counterHits
-            , String.fromInt << round <| stat.avgApm
-            , let moveName = stat.favoriteMove.moveName
-                  timesUsed = stat.favoriteMove.timesUsed
-              in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
-            , let killMoveName = stat.favoriteKillMove.moveName
-                  timesUsed = stat.favoriteKillMove.timesUsed
-              in killMoveName ++ " (" ++ String.fromInt timesUsed ++ ")"
+            [ Single << String.fromInt << round <| stat.totalDamage
+            , Single << String.fromInt << round <| stat.avgDamagePerOpening
+            , Single << String.fromInt << round <| stat.avgOpeningsPerKill
+            , Single << String.fromInt <| stat.neutralWins
+            , Single << String.fromInt <| stat.counterHits
+            , Single << String.fromInt << round <| stat.avgApm
+            , Dub (stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed)
+            , Dub (stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed)
             ]
 
 renderStageImgsWithWinner games =
@@ -312,13 +326,20 @@ renderStageImgsWithWinner games =
                  })
             games
 
-renderStatColumn styles strings =
+renderStatColumn styles subStyles strings =
     Element.indexedTable styles
         { data = strings
         , columns =
               [ { header = text ""
                 , width = px 175
-                , view = \_ x -> text x
+                , view = \_ x ->
+                      case x of
+                          Single l ->
+                              el [] <| text l
+                          Dub (l, sub) ->
+                              el [ below <| el subStyles
+                                       (text sub)
+                                 ] (text l)
                 }
               ]
         }
