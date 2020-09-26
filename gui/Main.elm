@@ -47,8 +47,8 @@ type alias Player =
     , tag : String
     , netplayName : String
     , rollbackCode : String
-    , main : Character
-    , secondaries : Array Character
+    , character : Character
+    , characters : Array Character
     , idx : Int
     }
 type alias PlayerStat =
@@ -184,13 +184,13 @@ viewStats stats =
                                        (text <| renderPlayerName player0)
                                  , onLeft <| renderSecondaries
                                      [ centerX
+                                     , centerY
                                      , spacing 5
-                                     , moveDown 5
                                      , scale 0.7
                                      ]
                                      player0
                                  ]
-                                   { src = charImgPath player0.main
+                                   { src = charImgPath player0.character
                                    , description = renderPlayerName player0
                                    }
                              , spacing 15
@@ -237,13 +237,13 @@ viewStats stats =
                                        (text <| renderPlayerName player1)
                                  , onRight <| renderSecondaries
                                      [ centerX
+                                     , centerY
                                      , spacing 5
-                                     , moveDown 5
                                      , scale 0.7
                                      ]
                                      player1
                                  ]
-                                   { src = charImgPath player1.main
+                                   { src = charImgPath player1.character
                                    , description = renderPlayerName player1
                                    }
                            , spacing 15
@@ -359,7 +359,7 @@ renderStageImgsWithWinner games =
                            [ centerX
                            , padding 5
                            ]
-                           { src = charIconPath gameInfo.winner.main
+                           { src = charIconPath gameInfo.winner.character
                            , description = renderPlayerName gameInfo.winner
                            }
                        ]
@@ -389,7 +389,7 @@ renderStatColumn styles subStyles strings =
 renderPlayerName player =
     case player.rollbackCode of
         "n/a" -> case player.netplayName of
-                     "No Name" -> player.main.characterName
+                     "No Name" -> player.character.characterName
                      _ -> player.netplayName
         _ -> player.rollbackCode
 
@@ -401,7 +401,7 @@ renderSecondaries styles player =
                  { src = charIconPath secondary
                  , description = renderPlayerName player
                  })
-            (List.reverse << toList <| player.secondaries)
+            (List.reverse << toList <| player.characters)
 
 -- @TODO: maybe move these all the node side
 charImgPath : Character -> String
@@ -479,8 +479,8 @@ playerEncoder player =
         , ("tag", E.string player.tag)
         , ("netplayName", E.string player.netplayName)
         , ("rollbackCode", E.string player.rollbackCode)
-        , ("main", characterEncoder player.main)
-        , ("secondaries", E.array characterEncoder player.secondaries)
+        , ("character", characterEncoder player.character)
+        , ("characters", E.array characterEncoder player.characters)
         , ("idx", E.int player.idx)
         ]
 
@@ -534,8 +534,8 @@ playerDecoder =
         (D.field "tag" D.string)
         (D.field "netplayName" D.string)
         (D.field "rollbackCode" D.string)
-        (D.field "main" characterDecoder)
-        (D.field "secondaries" <| D.array characterDecoder)
+        (D.field "character" characterDecoder)
+        (D.field "characters" <| D.array characterDecoder)
         (D.field "idx" D.int)
 
 -- default player for handling maybes
@@ -545,11 +545,11 @@ defaultPlayer =
     , tag = "XXXX"
     , netplayName = "n/a"
     , rollbackCode = "XXXX#YYYYY"
-    , main =
+    , character =
           { characterName = "Sonic"
           , color = "Emerald"
           }
-    , secondaries = fromList []
+    , characters = fromList []
     , idx = 5
     }
 

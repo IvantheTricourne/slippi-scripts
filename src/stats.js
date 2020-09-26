@@ -12,23 +12,13 @@ function makePlayerInfo(idx, settings, metadata) {
         tag: player.nametag,
         netplayName: _.get(metadata, ["players", idx, "names", "netplay"], null) || "No Name",
         rollbackCode: _.get(metadata, ["players", idx, "names", "code"], null) || "n/a",
-        main: {
+        character: {
             characterName: slp.characters.getCharacterName(player.characterId),
             color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
         },
-        secondaries: [
-            {
-                characterName: slp.characters.getCharacterName(player.characterId),
-                color: slp.characters.getCharacterColorName(player.characterId, player.characterColor),
-            }
-        ],
+        characters: [],
         idx: idx
     };
-}
-// determine if player swapped chars/colors
-function playerSwitchedChars(currPlayer, newPlayer) {
-    return (currPlayer.main.characterName !== newPlayer.main.characterName ||
-            currPlayer.main.color !== newPlayer.main.color);
 }
 // determine if action state represents player in dead state
 const deadStates = [ 0x000, 0x001, 0x002, 0x003, 0x004, 0x005,
@@ -49,11 +39,11 @@ function getGameWinner(game, player0, player1) {
         tag: "",
         netplayName: "No Name",
         rollbackCode: "n/a",
-      	main: {
+      	character: {
             characterName: "Wireframe",
             color: "Default"
         },
-      	secondaries: [],
+        characters: [],
         idx: 5
     };
     if (playerIsDead(player0Frame) && playerIsDead(player1Frame)) {
@@ -159,13 +149,13 @@ function getSagaIconName(statsJson) {
         }
     });
     if (player0Wins > player1Wins) {
-        return characterSagaDict[statsJson.players[0].main.characterName];
+        return characterSagaDict[statsJson.players[0].character.characterName];
     } else if (player1Wins > player0Wins) {
-        return characterSagaDict[statsJson.players[1].main.characterName];
+        return characterSagaDict[statsJson.players[1].character.characterName];
     } else if (player0Kills > player1Kills) {  // determine who had the most kills
-        return characterSagaDict[statsJson.players[0].main.characterName];
+        return characterSagaDict[statsJson.players[0].character.characterName];
     } else if (player1Kills > player0Kills) {
-        return characterSagaDict[statsJson.players[1].main.characterName];
+        return characterSagaDict[statsJson.players[1].character.characterName];
     } else {
         // return the smash logo when its a tie/indeterminate
         console.log("Set winner indeterminate!");
@@ -175,8 +165,9 @@ function getSagaIconName(statsJson) {
 
 function getStats(files, players = []) {
     var player0Info = {};
+    var player0Chars = [];
     var player1Info = {};
-    var currPlayers = null;
+    var player1Chars = [];
     var statsJson = {
         "totalGames": 0,
         "games": [],
@@ -250,22 +241,11 @@ function getStats(files, players = []) {
                 return;
             }
             // write first player info
-            if (player0Info.main === undefined) {
-                player0Info = player0;
-                player1Info = player1;
-            } else {
-                // push secondary info if there is any change in chars
-                if (playerSwitchedChars(player0Info, player0)) {
-                    player0Info.secondaries.push({ characterName: player0.main.characterName,
-                                                   color: player0.main.color
-                                                 });
-                }
-                if (playerSwitchedChars(player1Info, player1)) {
-                    player1Info.secondaries.push({ characterName: player1.main.characterName,
-                                                   color: player1.main.color
-                                                 });
-                }
-            }
+            player0Info = player0;
+            player1Info = player1;
+            // track char info
+            player0Chars.push(player0.character);
+            player1Chars.push(player1.character);
             // get moves from conversions and combos
             _.each(stats.combos.concat(stats.conversions), (combo, i) => {
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
@@ -311,19 +291,22 @@ function getStats(files, players = []) {
     }
     // sort games in case files were uploaded out of order
     statsJson.games.sort((a,b) => a.date - b.date);
-    console.log(JSON.stringify(statsJson.games, null, 2));
+    // console.log(JSON.stringify(statsJson.games, null, 2));
     // write player info
     statsJson.players = [player0Info, player1Info];
-    // uniquify secondaries lists + determine main
-    _.each(statsJson.players, (player, i) => {
-        // player.main = getMostUsedChar(player.secondaries).character;
-        player.secondaries = _.uniqWith(player.secondaries, _.isEqual);
-        // if secondary is the same as main, get rid of it
-        if (player.secondaries.length === 1 && _.isEqual(player.secondaries[0], player.main)) {
-            player.secondaries = [];
-        }
+    // console.log(JSON.stringify(statsJson.players, null, 2));
+    // handle chars
+    _.each([player0Chars, player1Chars], (playerChars, i) => {
+        // determine main
+        statsJson.players[i].character = getMostUsedChar(playerChars).character;
+        // uniquify secondaries
+        statsJson.players[i].characters = _.uniqWith(playerChars, _.isEqual);
+        // @TODO filter out: if secondary is the same as main, get rid of it
+        // if (player.characters.length === 1 && _.isEqual(player.characters[0], player.main)) {
+        //     player.secondaries = [];
+        // }
     });
-    console.log(JSON.stringify(statsJson.games, null, 2));
+    // console.log(JSON.stringify(statsJson.players, null, 2));
     // determine which saga icon to use
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
@@ -336,7 +319,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
-    //console.log(JSON.stringify(statsJson, null, 2));
+    // console.log(JSON.stringify(statsJson, null, 2));
     return statsJson;
 }
 exports.getStats = getStats;
