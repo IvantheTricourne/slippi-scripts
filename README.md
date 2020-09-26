@@ -5,6 +5,7 @@
 A collection of Slippi scripts and other vaguely useful things.
 
 [![Build Status](https://travis-ci.com/IvantheTricourne/slippi-scripts.svg?branch=master)](https://travis-ci.com/IvantheTricourne/slippi-scripts)
+[![License](https://img.shields.io/badge/license-GPL-brightgreen)](https://github.com/IvantheTricourne/slippi-scripts/blob/master/LICENSE.txt)
 <a href="https://patreon.com/setBaNG"><img src="https://img.shields.io/endpoint.svg?url=https://moshef9.wixsite.com/patreon-badge/_functions/badge/?username=setBaNG" alt="Patreon donate button" /> </a>
 </div>
 
