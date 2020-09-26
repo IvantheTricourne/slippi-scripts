@@ -2,7 +2,6 @@ port module Main exposing (..)
 
 import Array exposing (..)
 import Browser
-import Bytes exposing (Bytes)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -12,30 +11,44 @@ import Element.Input as Input
 import File as File exposing (File)
 import File.Select as Select
 import Html exposing (Html)
+import Html.Events exposing (preventDefaultOn)
+import Http as Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe
-import Task
 
 -- model
 
-type alias Model = Maybe Stats
+-- type alias Model = Result D.Error Stats
+type Model
+  = Waiting
+  | Uploading Float
+  | Done Stats
+  | Fail D.Error
 type alias Stats =
     { totalGames : Int
-    , wins : Array Player
-    , stages : Array String
+    , games : Array Game
     , totalLengthSeconds : Float
     , players : Array Player
     , playerStats : Array PlayerStat
     , sagaIcon : String
+    }
+type alias Game =
+    { stage : String
+    , winner : Player
+    , players : Array Player
+    }
+type alias Character =
+    { characterName : String
+    , color : String
     }
 type alias Player =
     { playerPort : Int
     , tag : String
     , netplayName : String
     , rollbackCode : String
-    , characterName : String
-    , color : String
+    , character : Character
+    , characters : Array Character
     , idx : Int
     }
 type alias PlayerStat =
@@ -52,36 +65,62 @@ type alias FavoriteMove =
     { moveName : String
     , timesUsed : Int
     }
+type CellValue
+    = Single String
+    | Dub (String, String)
 
 -- update
 
 type Msg
     = Reset
-    | JsonRequested
-    | JsonSelected File
-    | JsonLoaded String
+    | FilesRequested
+    | FilesSelected File (List File)
+    | GotProgress Http.Progress
+    | Uploaded (Result Http.Error Stats)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            ( Nothing
+            ( Waiting
             , Cmd.none
             )
-        JsonRequested ->
+        GotProgress progress ->
+            case progress of
+                Http.Sending p ->
+                    (Uploading (Http.fractionSent p), Cmd.none)
+
+                Http.Receiving _ ->
+                    (model, Cmd.none)
+        Uploaded result ->
+            case result of
+                Ok stats -> (Done stats, Cmd.none)
+                Err err -> (Fail <| httpErrToJsonErr err, Cmd.none)
+        FilesRequested ->
+            ( Uploading 0
+            , Select.files [ "*" ] FilesSelected
+            )
+        FilesSelected file files ->
             ( model
-            , Select.file [ "application/json" ] JsonSelected
+            , Http.request
+                  { method = "POST"
+                  , url = "http://localhost:8080/stats/upload"
+                  , headers = []
+                  , body = Http.multipartBody (List.map (Http.filePart "multipleFiles") (file::files))
+                  , expect = Http.expectJson Uploaded statsDecoder
+                  , timeout = Nothing
+                  , tracker = Just "upload"
+                  }
             )
-        JsonSelected file ->
-            ( model
-            , Task.perform JsonLoaded (File.toString file)
-            )
-        JsonLoaded str ->
-            ( case D.decodeString statsDecoder str of
-                  Ok stats -> Just stats
-                  Err _ -> Nothing
-            , Cmd.none
-            )
+
+httpErrToJsonErr : Http.Error -> D.Error
+httpErrToJsonErr httpErr =
+    case httpErr of
+        Http.BadUrl str -> D.Failure "BadUrl" (E.object [("msg", E.string str)])
+        Http.Timeout -> D.Failure "Timeout" (E.object [("msg", E.string "response timeout")])
+        Http.NetworkError -> D.Failure "NetworkError" (E.object [("msg", E.string "network error")])
+        Http.BadStatus int -> D.Failure "Bad Status" (E.object [("msg", E.string "Bad Status")])
+        Http.BadBody str -> D.Failure "Bad Body" (E.string str)
 
 -- view
 -- @TODO: clean up styles
@@ -100,109 +139,125 @@ view model =
            , spacing 10
            ]
     (case model of
-         Nothing -> viewInit
-         Just stats -> viewStats stats)
+         Waiting -> viewInit
+         Fail err -> viewFail err
+         Uploading pct -> viewProgress pct
+         Done stats -> viewStats stats)
 
 viewStats stats =
     let player0 = Maybe.withDefault defaultPlayer <| get 0 stats.players
         player1 = Maybe.withDefault defaultPlayer <| get 1 stats.players
     in
-    [ row [ centerX
-          , spacing 10
-          , padding 5
-          ]
-        [ renderStatColumn [ Font.color white
-                           , Font.alignRight
-                           , Font.extraBold
-                           , moveLeft 190
-                           , spacing 15
-                           ]
-              [ renderPlayerName player0 ]
-        , renderStatColumn [ Font.color white
-                           , Font.center
-                           , Font.bold
-                           , Font.italic
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , Element.mouseOver [ Background.color cyan
-                                                   ]
-                               , padding 2
-                               , Border.rounded 5
-                               , Events.onClick Reset
-                               , moveUp 25
-                               , scale 1.25
-                               ]
-                                 { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
-                                 , description = "Logo for set winner"
-                                 }
-                           , spacing 15
-                           ]
-            [ "" ]
-        , renderStatColumn [ Font.color white
-                           , Font.alignLeft
-                           , Font.extraBold
-                           , moveRight 190
-                           , spacing 15
-                           ]
-              [ renderPlayerName player1 ]
-        ]
+    [ image [ centerX
+            , centerY
+            , Element.mouseOver [ Background.color cyan
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick Reset
+            , scale 1.25
+            , moveDown 10
+            ]
+          { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
+          , description = "Logo for set winner"
+          }
     , row [ centerX
           , spacing 10
           , padding 10
           ]
-        [ renderStatColumn [ Font.color white
-                           , Font.alignRight
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , scale 1.5
-                               , moveLeft 150
-                               , Background.color grey
-                               , Border.rounded 5
-                               , padding 5
-                               ]
-                               { src = playerCharImgPath player0
-                               , description = player0.rollbackCode
-                               }
+          [ renderStatColumn [ Font.color white
+                             , Font.alignRight
+                             , onLeft <| image
+                                 [ centerX
+                                 , centerY
+                                 , scale 1.5
+                                 , Background.color grey
+                                 , Border.rounded 5
+                                 , moveRight 25
+                                 , moveDown 5
+                                 , padding 5
+                                 , above <| el
+                                     [ centerX
+                                     , Font.extraBold
+                                     , scale 0.75
+                                     ]
+                                       (text <| renderPlayerName player0)
+                                 , onLeft <| renderSecondaries
+                                     [ centerX
+                                     , centerY
+                                     , spacing 5
+                                     , scale 0.7
+                                     ]
+                                     player0
+                                 ]
+                                   { src = charImgPath player0.character
+                                   , description = renderPlayerName player0
+                                   }
+                             , spacing 15
+                             ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveRight 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| get 0 stats.playerStats)
+          , renderStatColumn [ Font.color white
+                             , Font.center
+                             , Font.bold
+                             , Font.italic
+                             , spacing 15
+                             ]
+                []
+                [ Single "Total Damage"
+                , Single "Damage / Opening"
+                , Single "Openings / Kill"
+                , Single "Neutral Wins"
+                , Single "Counter Hits"
+                , Single "APM"
+                , Single "Favorite Move"
+                , Single "Favorite Kill Move"
+                ]
+          , renderStatColumn [ Font.color white
+                             , Font.alignLeft
+                             , onRight <| image
+                                 [ centerX
+                                 , centerY
+                                 , scale 1.5
+                                 , Background.color grey
+                                 , Border.rounded 5
+                                 , moveLeft 25
+                                 , moveDown 5
+                                 , padding 5
+                                 , above <| el
+                                     [ centerX
+                                     , Font.extraBold
+                                     , scale 0.75
+                                     ]
+                                       (text <| renderPlayerName player1)
+                                 , onRight <| renderSecondaries
+                                     [ centerX
+                                     , centerY
+                                     , spacing 5
+                                     , scale 0.7
+                                     ]
+                                     player1
+                                 ]
+                                   { src = charImgPath player1.character
+                                   , description = renderPlayerName player1
+                                   }
                            , spacing 15
                            ]
-              (listifyPlayerStat <| get 0 stats.playerStats)
-        , renderStatColumn [ Font.color white
-                           , Font.center
-                           , Font.bold
-                           , Font.italic
-                           , spacing 15
-                           ]
-            [ "Total Damage"
-            , "APM"
-            , "Openings / Kill"
-            , "Damage / Opening"
-            , "Neutral Wins"
-            , "Counter Hits"
-            , "Favorite Move"
-            , "Favorite Kill Move"
-            ]
-        , renderStatColumn [ Font.color white
-                           , Font.alignLeft
-                           , Font.glow black 1000
-                           , behindContent <| image
-                               [ centerX
-                               , centerY
-                               , scale 1.5
-                               , moveRight 150
-                               , Background.color grey
-                               , Border.rounded 5
-                               , padding 5
-                               ]
-                               { src = playerCharImgPath player1
-                               , description = player1.rollbackCode
-                               }
-                           , spacing 15
-                           ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveLeft 80
+                , moveUp 4
+                ]
+
             (listifyPlayerStat <| get 1 stats.playerStats)
         ]
-    , renderStageImgsWithWinner (toList stats.stages) (toList stats.wins)
+    , renderStageImgsWithWinner (toList stats.games)
     ]
 viewInit =
     [ image [ centerX
@@ -210,86 +265,123 @@ viewInit =
                                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick JsonRequested
+            , Events.onClick FilesRequested
             , below <| el
                 [ Font.color white
                 , centerX
-                ] (text "stats")
+                      ] (text "Slippi Files")
             ]
           { src = "rsrc/Characters/Saga Icons/Smash.png"
-          , description = "Logo for set winner"
+          , description = "Smash Logo Button"
           }
     ]
+viewFail err =
+    let msg = D.errorToString err
+    in
+    [ image [ centerX
+            , Element.mouseOver [ Background.color cyan
+                                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <| el
+                [ Font.color white
+                , centerX
+                ] (text "Slippi Files")
+            ]
+          { src = "rsrc/Characters/Saga Icons/Smash.png"
+          , description = "Smash Logo Button"
+         }
+    -- @TODO: format this better somehow
+    , el [ Background.color white
+         , moveDown 50
+         ] (text msg)
+    ]
+viewProgress pct =
+    if pct > 0 then
+        [ image [ centerX
+                , Element.mouseOver [ Background.color cyan
+                                    ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick FilesRequested
+                , below <| el
+                    [ Font.color white
+                    , centerX
+                    ] (text "Slippi Files")
+                ]
+              { src = "rsrc/Characters/Saga Icons/Smash.png"
+              , description = "Smash Logo Button"
+              }
+        , el [ Font.color white
+             , centerX
+             , moveDown 50
+             ] (text (String.fromInt (round (100 * pct)) ++ "%"))
+        ]
+    else viewInit
 
-listifyPlayerStat : Maybe PlayerStat -> List String
+listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
     case mStat of
         Nothing -> []
         Just stat ->
-            [ String.fromInt << round <| stat.totalDamage
-            , String.fromInt << round <| stat.avgApm
-            , String.fromInt << round <| stat.avgOpeningsPerKill
-            , String.fromInt << round <| stat.avgDamagePerOpening
-            , String.fromInt stat.neutralWins
-            , String.fromInt stat.counterHits
-            , let moveName = stat.favoriteMove.moveName
-                  timesUsed = stat.favoriteMove.timesUsed
-              in moveName ++ " (" ++ String.fromInt timesUsed ++ ")"
-            , let killMoveName = stat.favoriteKillMove.moveName
-                  timesUsed = stat.favoriteKillMove.timesUsed
-              in killMoveName ++ " (" ++ String.fromInt timesUsed ++ ")"
+            [ Single << String.fromInt << round <| stat.totalDamage
+            , Single << String.fromInt << round <| stat.avgDamagePerOpening
+            , Single << String.fromInt << round <| stat.avgOpeningsPerKill
+            , Single << String.fromInt <| stat.neutralWins
+            , Single << String.fromInt <| stat.counterHits
+            , Single << String.fromInt << round <| stat.avgApm
+            , Dub (stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed)
+            , Dub (stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed)
             ]
 
-renderStageImgsWithWinner stages wins =
+renderStageImgsWithWinner games =
     row [ Background.color black
         , Border.rounded 5
         , spacing 15
         , padding 10
         , centerX
+        , moveDown 25
         ] <|
-        List.map2
-            (\stageName winnerInfo ->
+        List.indexedMap
+            (\i gameInfo ->
                  image [ Background.color white
                        , Border.rounded 3
                        , scale 1.1
                        , padding 1
+                       , above <| el
+                           [ Font.color white
+                           , centerX
+                           , scale 0.55
+                           ]
+                           (text << String.fromInt <| i + 1)
                        , below <| image
                            [ centerX
                            , padding 5
                            ]
-                           { src = playerCharIconPath winnerInfo
-                           , description = renderPlayerName winnerInfo
+                           { src = charIconPath gameInfo.winner.character
+                           , description = renderPlayerName gameInfo.winner
                            }
                        ]
-                 { src = stageImgPath stageName
-                 , description = stageName
+                 { src = stageImgPath gameInfo.stage
+                 , description = gameInfo.stage
                  })
-            stages wins
+            games
 
-renderWinImgs wins =
-    row [ Background.color grey
-        , Border.rounded 5
-        , spacing 15
-        , padding 10
-        , centerX
-        ] <|
-        List.indexedMap
-            (\i winnerInfo -> image [ Border.rounded 3
-                                    , scale 1.1
-                                    , padding 1
-                                    ]
-                 { src = playerCharIconPath winnerInfo
-                 , description = renderPlayerName winnerInfo
-                 })
-            wins
-
-renderStatColumn styles strings =
+renderStatColumn styles subStyles strings =
     Element.indexedTable styles
         { data = strings
         , columns =
               [ { header = text ""
                 , width = px 175
-                , view = \_ x -> text x
+                , view = \_ x ->
+                      case x of
+                          Single l ->
+                              el [] <| text l
+                          Dub (l, sub) ->
+                              el [ below <| el subStyles
+                                       (text sub)
+                                 ] (text l)
                 }
               ]
         }
@@ -297,18 +389,28 @@ renderStatColumn styles strings =
 renderPlayerName player =
     case player.rollbackCode of
         "n/a" -> case player.netplayName of
-                     "No Name" -> player.characterName
+                     "No Name" -> player.character.characterName
                      _ -> player.netplayName
         _ -> player.rollbackCode
 
--- @TODO: maybe move these all the node side
-playerCharImgPath : Player -> String
-playerCharImgPath player =
-    "rsrc/Characters/Portraits/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+renderSecondaries styles player =
+    column styles <|
+        List.map
+            (\secondary -> image
+                 []
+                 { src = charIconPath secondary
+                 , description = renderPlayerName player
+                 })
+            (List.reverse << toList <| player.characters)
 
-playerCharIconPath : Player -> String
-playerCharIconPath player =
-    "rsrc/Characters/Stock Icons/" ++ player.characterName ++ "/" ++ player.color ++ ".png"
+-- @TODO: maybe move these all the node side
+charImgPath : Character -> String
+charImgPath character =
+    "rsrc/Characters/Portraits/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
+
+charIconPath : Character -> String
+charIconPath character =
+    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
 
 stageImgPath : String -> String
 stageImgPath stageName =
@@ -316,7 +418,7 @@ stageImgPath stageName =
 
 -- elements
 black = rgb255 0 0 0
-white = rgb255 255 255 255
+white = rgb255 238 236 229
 grey = rgb255 25 25 25
 red = rgb255 255 0 0
 cyan = rgb255 175 238 238
@@ -342,17 +444,33 @@ updateWithStorage msg oldModel =
 encode : Model -> E.Value
 encode model =
     case model of
-        Nothing -> E.object []
-        Just stats ->
+        Waiting -> E.object []
+        Uploading _ -> E.object []
+        Fail _ -> E.object []
+        Done stats ->
             E.object
                 [ ("totalGames", E.int stats.totalGames)
-                , ("wins", E.array playerEncoder stats.wins)
-                , ("stages", E.array E.string stats.stages)
+                , ("games", E.array gameEncoder stats.games)
                 , ("totalLengthSeconds", E.float stats.totalLengthSeconds)
                 , ("players", E.array playerEncoder stats.players)
                 , ("playerStats", E.array playerStatEncoder stats.playerStats)
                 , ("sagaIcon" , E.string stats.sagaIcon)
                 ]
+
+gameEncoder : Game -> E.Value
+gameEncoder game =
+    E.object
+        [ ("stage", E.string game.stage)
+        , ("winner", playerEncoder game.winner)
+        , ("players", E.array playerEncoder game.players)
+        ]
+
+characterEncoder : Character -> E.Value
+characterEncoder character =
+    E.object
+        [ ("characterName", E.string character.characterName)
+        , ("color", E.string character.color)
+        ]
 
 playerEncoder : Player -> E.Value
 playerEncoder player =
@@ -361,8 +479,8 @@ playerEncoder player =
         , ("tag", E.string player.tag)
         , ("netplayName", E.string player.netplayName)
         , ("rollbackCode", E.string player.rollbackCode)
-        , ("characterName", E.string player.characterName)
-        , ("color", E.string player.color)
+        , ("character", characterEncoder player.character)
+        , ("characters", E.array characterEncoder player.characters)
         , ("idx", E.int player.idx)
         ]
 
@@ -386,20 +504,28 @@ favoriteMoveEncoder favMov =
         , ("timesUsed", E.int favMov.timesUsed)
         ]
 
-decoder : D.Decoder Model
-decoder = D.nullable statsDecoder
-
 statsDecoder : D.Decoder Stats
 statsDecoder =
-  D.map7 Stats
+  D.map6 Stats
     (D.field "totalGames" D.int)
-    (D.field "wins" <| D.array playerDecoder)
-    (D.field "stages" <| D.array D.string)
+    (D.field "games" <| D.array gameDecoder)
     (D.field "totalLengthSeconds" D.float)
     (D.field "players" <| D.array playerDecoder)
     (D.field "playerStats" <| D.array playerStatDecoder)
     (D.field "sagaIcon" <| D.string)
 
+gameDecoder : D.Decoder Game
+gameDecoder =
+    D.map3 Game
+        (D.field "stage" D.string)
+        (D.field "winner" playerDecoder)
+        (D.field "players" <| D.array playerDecoder)
+
+characterDecoder : D.Decoder Character
+characterDecoder =
+    D.map2 Character
+        (D.field "characterName" D.string)
+        (D.field "color" D.string)
 
 playerDecoder : D.Decoder Player
 playerDecoder =
@@ -408,8 +534,8 @@ playerDecoder =
         (D.field "tag" D.string)
         (D.field "netplayName" D.string)
         (D.field "rollbackCode" D.string)
-        (D.field "characterName" D.string)
-        (D.field "color" D.string)
+        (D.field "character" characterDecoder)
+        (D.field "characters" <| D.array characterDecoder)
         (D.field "idx" D.int)
 
 -- default player for handling maybes
@@ -419,8 +545,11 @@ defaultPlayer =
     , tag = "XXXX"
     , netplayName = "n/a"
     , rollbackCode = "XXXX#YYYYY"
-    , characterName = "Sonic"
-    , color = "Emerald"
+    , character =
+          { characterName = "Sonic"
+          , color = "Emerald"
+          }
+    , characters = fromList []
     , idx = 5
     }
 
@@ -444,15 +573,16 @@ favoriteMoveDecoder =
 
 -- subscriptions
 subscriptions : Model -> Sub Msg
-subscriptions _ = Sub.none
+subscriptions model =
+  Http.track "upload" GotProgress
 
 -- main
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue decoder flags of
-          Ok model -> model
-          Err _ -> Nothing
+    ( case D.decodeValue statsDecoder flags of
+          Err _ -> Waiting
+          Ok stats -> Done stats
     , Cmd.none
     )
 
