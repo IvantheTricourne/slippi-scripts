@@ -5,8 +5,7 @@
 A collection of Slippi scripts and other vaguely useful things.
 
 [![Build Status](https://travis-ci.com/IvantheTricourne/slippi-scripts.svg?branch=master)](https://travis-ci.com/IvantheTricourne/slippi-scripts)
-
-<a href="https://www.patreon.com/bePatron?u=15456361" data-patreon-widget-type="become-patron-button">Become a Patron!</a><script async src="https://c6.patreon.com/becomePatronButton.bundle.js"></script>
+<a href="https://patreon.com/setBaNG"><img src="https://img.shields.io/endpoint.svg?url=https://moshef9.wixsite.com/patreon-badge/_functions/badge/?username=setBaNG" alt="Patreon donate button" /> </a>
 </div>
 
 ## how
