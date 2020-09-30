@@ -159,7 +159,6 @@ const stages = {
 
 describe('All stages can be visualized', () => {
     _.each(stages, (stage, i) => {
-        console.log(stage);
         it(`${stage.name}`, () => {
             let stagePath = stageIconPath(stage.name);
             assert.ok(fs.existsSync(stagePath),`${stagePath} does not exist`);
