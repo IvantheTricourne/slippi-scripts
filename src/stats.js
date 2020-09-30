@@ -69,7 +69,7 @@ function getMostUsedMove(arr) {
         for (var j=i; j<arr.length; j++) {
             if (arr[i] == arr[j])
                 m++;
-            if (mf<m) {
+            if (mf<=m) {
                 mf=m;
                 item = arr[i];
             }
@@ -94,7 +94,7 @@ function getMostUsedChar(arr) {
         for (var j=i; j<arr.length; j++) {
             if (_.isEqual(arr[i],arr[j]))
                 m++;
-            if (mf<m) {
+            if (mf<=m) {
                 mf=m;
                 item = arr[i];
             }
@@ -296,8 +296,11 @@ function getStats(files, players = []) {
     statsJson.players = [player0Info, player1Info];
     // console.log(JSON.stringify(statsJson.players, null, 2));
     // handle chars
+    // console.log(JSON.stringify(statsJson.players, null, 2));
     _.each([player0Chars, player1Chars], (playerChars, i) => {
+        // console.log(`P${i}: ${JSON.stringify(playerChars, null, 2)}`);
         // determine main
+        // console.log(getMostUsedChar(playerChars));
         statsJson.players[i].character = getMostUsedChar(playerChars).character;
         // uniquify secondaries
         statsJson.players[i].characters = _.uniqWith(playerChars, _.isEqual);
@@ -308,6 +311,7 @@ function getStats(files, players = []) {
     });
     // console.log(JSON.stringify(statsJson.players, null, 2));
     // determine which saga icon to use
+    // console.log(JSON.stringify(statsJson.players, null, 2));
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
     let totalGames = statsJson.totalGames;
