@@ -160,6 +160,30 @@ viewStats stats =
         , Events.onClick Reset
         , scale 1.25
         , moveDown 10
+        , onLeft <|
+            (getPlayerWinCount stats.playerStats 0
+                |> String.fromInt
+                |> text
+                |> el
+                    [ Font.color white
+                    , Font.extraBold
+                    , scale 1.5
+                    , moveLeft 35
+                    , moveDown 30
+                    ]
+            )
+        , onRight <|
+            (getPlayerWinCount stats.playerStats 1
+                |> String.fromInt
+                |> text
+                |> el
+                    [ Font.color white
+                    , Font.extraBold
+                    , scale 1.5
+                    , moveRight 35
+                    , moveDown 30
+                    ]
+            )
         ]
         { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
         , description = "Logo for set winner"
@@ -360,6 +384,20 @@ viewProgress pct =
         viewInit
 
 
+getPlayerWinCount : Array.Array PlayerStat -> Int -> Int
+getPlayerWinCount playerStats idx =
+    let
+        mPlayerStats =
+            Array.get idx playerStats
+    in
+    case mPlayerStats of
+        Nothing ->
+            -1
+
+        Just playerStat ->
+            playerStat.wins
+
+
 listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
     case mStat of
@@ -368,11 +406,11 @@ listifyPlayerStat mStat =
 
         Just stat ->
             [ Single << String.fromInt << round <| stat.totalDamage
-            , Single << String.fromInt << round <| stat.avgDamagePerOpening
-            , Single << String.fromInt << round <| stat.avgOpeningsPerKill
+            , Single << String.fromInt << round <| stat.avgs.avgDamagePerOpening
+            , Single << String.fromInt << round <| stat.avgs.avgOpeningsPerKill
             , Single << String.fromInt <| stat.neutralWins
             , Single << String.fromInt <| stat.counterHits
-            , Single << String.fromInt << round <| stat.avgApm
+            , Single << String.fromInt << round <| stat.avgs.avgApm
             , Dub ( stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed )
             , Dub ( stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed )
             ]

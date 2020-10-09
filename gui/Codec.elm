@@ -50,17 +50,25 @@ playerEncoder player =
         ]
 
 
+playerStatAvgsEncoder : PlayerStatAvgs -> E.Value
+playerStatAvgsEncoder playerStatAvgs =
+    E.object
+        [ ( "avgApm", E.float playerStatAvgs.avgApm )
+        , ( "avgOpeningsPerKill", E.float playerStatAvgs.avgOpeningsPerKill )
+        , ( "avgDamagePerOpening", E.float playerStatAvgs.avgDamagePerOpening )
+        ]
+
+
 playerStatEncoder : PlayerStat -> E.Value
 playerStatEncoder playerStat =
     E.object
         [ ( "totalDamage", E.float playerStat.totalDamage )
         , ( "neutralWins", E.int playerStat.neutralWins )
         , ( "counterHits", E.int playerStat.counterHits )
-        , ( "avgApm", E.float playerStat.avgApm )
-        , ( "avgOpeningsPerKill", E.float playerStat.avgOpeningsPerKill )
-        , ( "avgDamagePerOpening", E.float playerStat.avgDamagePerOpening )
+        , ( "avgs", playerStatAvgsEncoder playerStat.avgs )
         , ( "favoriteMove", favoriteMoveEncoder playerStat.favoriteMove )
         , ( "favoriteKillMove", favoriteMoveEncoder playerStat.favoriteKillMove )
+        , ( "wins", E.int playerStat.wins )
         ]
 
 
@@ -103,17 +111,24 @@ playerDecoder =
         (D.field "idx" D.int)
 
 
-playerStatDecoder : D.Decoder PlayerStat
-playerStatDecoder =
-    D.map8 PlayerStat
-        (D.field "totalDamage" D.float)
-        (D.field "neutralWins" D.int)
-        (D.field "counterHits" D.int)
+playerStatAvgsDecoder : D.Decoder PlayerStatAvgs
+playerStatAvgsDecoder =
+    D.map3 PlayerStatAvgs
         (D.field "avgApm" D.float)
         (D.field "avgOpeningsPerKill" D.float)
         (D.field "avgDamagePerOpening" D.float)
+
+
+playerStatDecoder : D.Decoder PlayerStat
+playerStatDecoder =
+    D.map7 PlayerStat
+        (D.field "totalDamage" D.float)
+        (D.field "neutralWins" D.int)
+        (D.field "counterHits" D.int)
+        (D.field "avgs" playerStatAvgsDecoder)
         (D.field "favoriteMove" favoriteMoveDecoder)
         (D.field "favoriteKillMove" favoriteMoveDecoder)
+        (D.field "wins" D.int)
 
 
 favoriteMoveDecoder : D.Decoder FavoriteMove
