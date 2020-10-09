@@ -177,12 +177,14 @@ function getStats(files, players = []) {
             { "totalDamage": 0,
               "neutralWins": 0,
               "counterHits": 0,
-              "kills": 0
+              "kills": 0,
+              "wins": 0
             },
             { "totalDamage": 0,
               "neutralWins": 0,
               "counterHits": 0,
-              "kills": 0
+              "kills": 0,
+              "wins": 0
             }
         ]
     };
@@ -257,7 +259,7 @@ function getStats(files, players = []) {
                     playerTotals[combo.playerIndex].killMoves.push(killingMove);
                 }
             });
-            // write the stats to file
+            // update stats
             _.each(stats.overall, (playerStats, i) => {
                 // sum things
                 statsJson.playerStats[i].totalDamage += playerStats.totalDamage;
@@ -269,9 +271,13 @@ function getStats(files, players = []) {
                 playerTotals[i].openingsPerKills += playerStats.openingsPerKill.ratio;
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
             });
+            // update win counts
+            let gameWinner = getGameWinner(game, player0, player1);
+            console.log(JSON.stringify(gameWinner, null, 2));
+            statsJson.playerStats[gameWinner.idx].wins += 1;
             // track stages, winner, total games and set length
             statsJson.games.push({ stage: slp.stages.getStageName(settings.stageId),
-                                   winner: getGameWinner(game, player0, player1),
+                                   winner: gameWinner,
                                    players: [player0, player1],
                                    // @NOTE: this field is not used by the frontend (yet)
                                    date: gameDate
