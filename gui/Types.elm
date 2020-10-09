@@ -5,6 +5,7 @@ module Types exposing
     , Game
     , Player
     , PlayerStat
+    , PlayerStatAvgs
     , Stats
     )
 
@@ -45,15 +46,21 @@ type alias Player =
     }
 
 
+type alias PlayerStatAvgs =
+    { avgApm : Float
+    , avgOpeningsPerKill : Float
+    , avgDamagePerOpening : Float
+    }
+
+
 type alias PlayerStat =
     { totalDamage : Float
     , neutralWins : Int
     , counterHits : Int
-    , avgApm : Float
-    , avgOpeningsPerKill : Float
-    , avgDamagePerOpening : Float
+    , avgs : PlayerStatAvgs
     , favoriteMove : FavoriteMove
     , favoriteKillMove : FavoriteMove
+    , wins : Int
     }
 
 
