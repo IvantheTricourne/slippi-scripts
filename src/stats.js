@@ -29,11 +29,16 @@ function playerIsDead(playerFrame) {
             deadStates.includes(playerFrame.post.actionStateId)
            );
 }
+function playerHasMoreStocks(player0Frame, player1Frame) {
+    return player0Frame.post.stocksRemaining > player1Frame.post.stocksRemaining;
+}
 // determine who won the game by determining who died when the game ended
 function getGameWinner(game, player0, player1) {
     let latestFrame = game.getLatestFrame();
     let player0Frame = latestFrame.players[0];
     let player1Frame = latestFrame.players[1];
+    // console.log(JSON.stringify(Object.keys(game), null, 2));
+    // console.log(JSON.stringify(latestFrame, null, 2));
     let noOneWins = {
       	port: 5,
         tag: "",
@@ -46,18 +51,21 @@ function getGameWinner(game, player0, player1) {
         characters: [],
         idx: 5
     };
-    if (playerIsDead(player0Frame) && playerIsDead(player1Frame)) {
-        // both players died
-        return noOneWins;
-    } else if (playerIsDead(player0Frame)) {
-        // player 0 lost
-        return player1;
-    } else if (playerIsDead(player1Frame)) {
-        // player 1 lost
-        return player0;
+    if (playerHasMoreStocks(player0Frame, player1Frame)) {
+        // player 0 has more stocks
+        return { winner: player0,
+                 stocks: player0Frame.post.stocksRemaining
+               };
+    } else if (playerHasMoreStocks(player1Frame, player0Frame)) {
+        // player 1 has more stocks
+        return { winner: player1,
+                 stocks: player1Frame.post.stocksRemaining
+               };
     } else {
-        // game didn't end with a death
-        return noOneWins;
+        // game ended with even stocks
+        return { winner: noOneWins,
+                 stocks: 0
+               };
     }
 }
 // get most used move
@@ -274,12 +282,13 @@ function getStats(files, players = []) {
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
             });
             // update win counts
-            let gameWinner = getGameWinner(game, player0, player1);
+            let { winner, stocks } = getGameWinner(game, player0, player1);
             // console.log(JSON.stringify(gameWinner, null, 2));
-            statsJson.playerStats[gameWinner.idx].wins += 1;
+            statsJson.playerStats[winner.idx].wins += 1;
             // track stages, winner, total games and set length
             statsJson.games.push({ stage: slp.stages.getStageName(settings.stageId),
-                                   winner: gameWinner,
+                                   winner: winner,
+                                   stocks: stocks,
                                    players: [player0, player1],
                                    // @NOTE: this field is not used by the frontend (yet)
                                    date: gameDate
