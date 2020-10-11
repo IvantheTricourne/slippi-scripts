@@ -14,6 +14,10 @@ function charIconPath(charName, charColor) {
     return path.join(process.cwd(), `rsrc/Characters/Stock Icons/${charName}/${charColor}.png`);
 }
 
+function fourStockCharIconPath(charName, charColor) {
+    return path.join(process.cwd(), `rsrc/Characters/Stock Icons/${charName}/${charColor}G.png`);
+}
+
 function stageIconPath(stageName) {
     return path.join(process.cwd(), `rsrc/Stages/Icons/${stageName}.png`);
 }
@@ -28,6 +32,10 @@ _.each(slp.characters.getAllCharacters(), (character, i) => {
             it(`${color} Stock Icon`, () => {
                 let iconPath = charIconPath(character.name, color);
                 assert.ok(fs.existsSync(iconPath),`${iconPath} does not exist`);
+            });
+            it(`${color} Four Stock Icon`, () => {
+                let fourStockIconPath = fourStockCharIconPath(character.name, color);
+                assert.ok(fs.existsSync(fourStockIconPath),`${fourStockIconPath} does not exist`);
             });
         });
     });
