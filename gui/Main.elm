@@ -146,8 +146,14 @@ viewStats stats =
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
 
+        player0Wins =
+            getPlayerWinCount stats.playerStats 0
+
         player1 =
             Maybe.withDefault defaultPlayer <| Array.get 1 stats.players
+
+        player1Wins =
+            getPlayerWinCount stats.playerStats 1
     in
     [ image
         [ centerX
@@ -161,7 +167,7 @@ viewStats stats =
         , scale 1.25
         , moveDown 10
         , onLeft <|
-            (getPlayerWinCount stats.playerStats 0
+            (player0Wins
                 |> String.fromInt
                 |> text
                 |> el
@@ -173,7 +179,7 @@ viewStats stats =
                     ]
             )
         , onRight <|
-            (getPlayerWinCount stats.playerStats 1
+            (player1Wins
                 |> String.fromInt
                 |> text
                 |> el
@@ -201,7 +207,7 @@ viewStats stats =
                     [ centerX
                     , centerY
                     , scale 1.5
-                    , Background.color grey
+                    , useWinnerBackgroundGradient player0Wins player1Wins
                     , Border.rounded 5
                     , moveRight 25
                     , moveDown 5
@@ -259,7 +265,7 @@ viewStats stats =
                     [ centerX
                     , centerY
                     , scale 1.5
-                    , Background.color grey
+                    , useWinnerBackgroundGradient player1Wins player0Wins
                     , Border.rounded 5
                     , moveLeft 25
                     , moveDown 5
@@ -416,8 +422,22 @@ listifyPlayerStat mStat =
             ]
 
 
+useWinnerBackgroundGradient playerWins opponentWins =
+    if playerWins > opponentWins then
+        Background.gradient
+            { angle = 3.14
+            , steps = [ black, goldenYellow ]
+            }
+
+    else
+        Background.gradient
+            { angle = 3.14
+            , steps = [ black, grey ]
+            }
+
+
 renderStageImgsWithWinner games =
-    row
+    wrappedRow
         [ Background.color black
         , Border.rounded 5
         , spacing 15
@@ -426,34 +446,49 @@ renderStageImgsWithWinner games =
         , moveDown 25
         ]
     <|
-        List.indexedMap
-            (\i gameInfo ->
-                image
-                    [ Background.color white
-                    , Border.rounded 3
-                    , scale 1.1
-                    , padding 1
-                    , above <|
-                        el
-                            [ Font.color white
-                            , centerX
-                            , scale 0.55
-                            ]
-                            (text << String.fromInt <| i + 1)
-                    , below <|
-                        image
-                            [ centerX
-                            , padding 5
-                            ]
-                            { src = charIconPath gameInfo.winner.character
-                            , description = renderPlayerName gameInfo.winner
-                            }
-                    ]
-                    { src = stageImgPath gameInfo.stage
-                    , description = gameInfo.stage
-                    }
-            )
-            games
+        List.indexedMap renderStageAndWinnerIcon games
+
+
+renderStageAndWinnerIcon gameNum gameInfo =
+    let
+        ( colorOpts, stockImg ) =
+            if gameInfo.stocks == 4 then
+                ( [ Background.color gold, Font.color gold, Font.extraBold ]
+                , fourStockCharIconPath gameInfo.winner.character
+                )
+
+            else
+                ( [ Background.color white, Font.color white ]
+                , charIconPath gameInfo.winner.character
+                )
+    in
+    image
+        (colorOpts
+            ++ [ Border.rounded 3
+               , scale 1.1
+               , padding 1
+               , above <|
+                    el
+                        [ centerX
+                        , scale 0.55
+                        ]
+                        (text << String.fromInt <| gameNum + 1)
+               , below <|
+                    image
+                        [ centerX
+                        , padding 5
+                        , onRight <|
+                            el [ scale 0.55, moveLeft 5 ]
+                                (text << String.fromInt <| gameInfo.stocks)
+                        ]
+                        { src = stockImg
+                        , description = renderPlayerName gameInfo.winner
+                        }
+               ]
+        )
+        { src = stageImgPath gameInfo.stage
+        , description = gameInfo.stage
+        }
 
 
 renderStatColumn styles subStyles strings =
@@ -521,6 +556,11 @@ charIconPath character =
     "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
 
 
+fourStockCharIconPath : Character -> String
+fourStockCharIconPath character =
+    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ "G" ++ ".png"
+
+
 stageImgPath : String -> String
 stageImgPath stageName =
     "rsrc/Stages/Icons/" ++ stageName ++ ".png"
@@ -548,6 +588,14 @@ red =
 
 cyan =
     rgb255 175 238 238
+
+
+gold =
+    rgb255 255 215 0
+
+
+goldenYellow =
+    rgb255 255 215 60
 
 
 

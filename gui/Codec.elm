@@ -25,6 +25,7 @@ gameEncoder game =
     E.object
         [ ( "stage", E.string game.stage )
         , ( "winner", playerEncoder game.winner )
+        , ( "stocks", E.int game.stocks )
         , ( "players", E.array playerEncoder game.players )
         ]
 
@@ -86,9 +87,10 @@ favoriteMoveEncoder favMov =
 
 gameDecoder : D.Decoder Game
 gameDecoder =
-    D.map3 Game
+    D.map4 Game
         (D.field "stage" D.string)
         (D.field "winner" playerDecoder)
+        (D.field "stocks" D.int)
         (D.field "players" <| D.array playerDecoder)
 
 

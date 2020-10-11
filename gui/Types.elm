@@ -25,6 +25,7 @@ type alias Stats =
 type alias Game =
     { stage : String
     , winner : Player
+    , stocks : Int
     , players : Array Player
     }
 
