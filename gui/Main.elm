@@ -417,7 +417,7 @@ listifyPlayerStat mStat =
 
 
 renderStageImgsWithWinner games =
-    row
+    wrappedRow
         [ Background.color black
         , Border.rounded 5
         , spacing 15
@@ -426,34 +426,49 @@ renderStageImgsWithWinner games =
         , moveDown 25
         ]
     <|
-        List.indexedMap
-            (\i gameInfo ->
-                image
-                    [ Background.color white
-                    , Border.rounded 3
-                    , scale 1.1
-                    , padding 1
-                    , above <|
-                        el
-                            [ Font.color white
-                            , centerX
-                            , scale 0.55
-                            ]
-                            (text << String.fromInt <| i + 1)
-                    , below <|
-                        image
-                            [ centerX
-                            , padding 5
-                            ]
-                            { src = charIconPath gameInfo.winner.character
-                            , description = renderPlayerName gameInfo.winner
-                            }
-                    ]
-                    { src = stageImgPath gameInfo.stage
-                    , description = gameInfo.stage
-                    }
-            )
-            games
+        List.indexedMap renderStageAndWinnerIcon games
+
+
+renderStageAndWinnerIcon gameNum gameInfo =
+    let
+        ( colorOpts, stockImg ) =
+            if gameInfo.stocks == 4 then
+                ( [ Background.color gold, Font.color gold, Font.extraBold ]
+                , fourStockCharIconPath gameInfo.winner.character
+                )
+
+            else
+                ( [ Background.color white, Font.color white ]
+                , charIconPath gameInfo.winner.character
+                )
+    in
+    image
+        (colorOpts
+            ++ [ Border.rounded 3
+               , scale 1.1
+               , padding 1
+               , above <|
+                    el
+                        [ centerX
+                        , scale 0.55
+                        ]
+                        (text << String.fromInt <| gameNum + 1)
+               , below <|
+                    image
+                        [ centerX
+                        , padding 5
+                        , onRight <|
+                            el [ scale 0.55, moveLeft 5 ]
+                                (text << String.fromInt <| gameInfo.stocks)
+                        ]
+                        { src = stockImg
+                        , description = renderPlayerName gameInfo.winner
+                        }
+               ]
+        )
+        { src = stageImgPath gameInfo.stage
+        , description = gameInfo.stage
+        }
 
 
 renderStatColumn styles subStyles strings =
@@ -521,6 +536,11 @@ charIconPath character =
     "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
 
 
+fourStockCharIconPath : Character -> String
+fourStockCharIconPath character =
+    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ "G" ++ ".png"
+
+
 stageImgPath : String -> String
 stageImgPath stageName =
     "rsrc/Stages/Icons/" ++ stageName ++ ".png"
@@ -548,6 +568,10 @@ red =
 
 cyan =
     rgb255 175 238 238
+
+
+gold =
+    rgb255 255 215 0
 
 
 
