@@ -146,8 +146,14 @@ viewStats stats =
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
 
+        player0Wins =
+            getPlayerWinCount stats.playerStats 0
+
         player1 =
             Maybe.withDefault defaultPlayer <| Array.get 1 stats.players
+
+        player1Wins =
+            getPlayerWinCount stats.playerStats 1
     in
     [ image
         [ centerX
@@ -161,7 +167,7 @@ viewStats stats =
         , scale 1.25
         , moveDown 10
         , onLeft <|
-            (getPlayerWinCount stats.playerStats 0
+            (player0Wins
                 |> String.fromInt
                 |> text
                 |> el
@@ -173,7 +179,7 @@ viewStats stats =
                     ]
             )
         , onRight <|
-            (getPlayerWinCount stats.playerStats 1
+            (player1Wins
                 |> String.fromInt
                 |> text
                 |> el
@@ -201,7 +207,7 @@ viewStats stats =
                     [ centerX
                     , centerY
                     , scale 1.5
-                    , Background.color grey
+                    , useWinnerBackgroundGradient player0Wins player1Wins
                     , Border.rounded 5
                     , moveRight 25
                     , moveDown 5
@@ -259,7 +265,7 @@ viewStats stats =
                     [ centerX
                     , centerY
                     , scale 1.5
-                    , Background.color grey
+                    , useWinnerBackgroundGradient player1Wins player0Wins
                     , Border.rounded 5
                     , moveLeft 25
                     , moveDown 5
@@ -414,6 +420,20 @@ listifyPlayerStat mStat =
             , Dub ( stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed )
             , Dub ( stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed )
             ]
+
+
+useWinnerBackgroundGradient playerWins opponentWins =
+    if playerWins > opponentWins then
+        Background.gradient
+            { angle = 3.14
+            , steps = [ black, goldenYellow ]
+            }
+
+    else
+        Background.gradient
+            { angle = 3.14
+            , steps = [ black, grey ]
+            }
 
 
 renderStageImgsWithWinner games =
@@ -572,6 +592,10 @@ cyan =
 
 gold =
     rgb255 255 215 0
+
+
+goldenYellow =
+    rgb255 255 215 60
 
 
 
