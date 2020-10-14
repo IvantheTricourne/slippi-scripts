@@ -33,11 +33,14 @@ npm run start
 
 ## Development
 
-`npm run watch`
+```
+npm install
+npm run watch
+```
 
-This will launch a running instance of the main app similar to the `start` command, except that any edits made in:
+This will launch an instance of the main app similar to the `start` command, except that any changes made in:
 
 * `/src` (backend)
 * `/gui` (frontend)
 
-will magically refresh the app! 
+will magically refresh the app with the appropriate changes!
