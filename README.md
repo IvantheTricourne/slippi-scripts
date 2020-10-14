@@ -10,7 +10,7 @@ A collection of Slippi scripts and other vaguely useful things.
 
 </div>
 
-## features
+<h2 align="center">Features</h2>
 
 <div align="center">
 
