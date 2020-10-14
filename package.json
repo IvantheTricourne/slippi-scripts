@@ -30,7 +30,7 @@
         "serve": "node src/server.js",
         "serve:watch": "nodemon src/server.js",
         "start": "npm run elm & npm run serve & electron app/main.js",
-        "watch": "npm run elm & npm run elm:watch & npm run serve:watch & electron app/main.js & wait",
+        "watch": "npm run elm & npm run elm:watch & npm run serve:watch & electron app/main.js true & wait",
         "test": "mocha"
     },
     "repository": {

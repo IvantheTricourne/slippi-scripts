@@ -7,7 +7,15 @@ const BrowserWindow = electron.BrowserWindow; // This is a Module that creates w
 
 let mainWindow; // saves a global reference to mainWindow so it doesn't get garbage collected
 
-app.on('ready', createWindow); // called when electron has initialized
+app.on('ready', async () => {
+    // process is in dev mod or nah
+    if (process.argv[2]) {
+        console.log('Running in dev Mode');
+    } else {
+        console.log('Running in prod mode');
+    }
+    createWindow();
+}); // called when electron has initialized
 
 // tell chokidar to watch these files for changes
 // reload the window if there is one
