@@ -1,4 +1,4 @@
-<h1 align="center">Slippi Scripts</h1>
+g<h1 align="center">Slippi Scripts</h1>
 
 <div align="center">
 
@@ -18,14 +18,26 @@ _Visualize game/set stats!_
 
 ![Slippi Stats Demo](demo/demo.gif)
 
+_Many more in the making!_
+
 </div>
 
 ## Usage
 
 You'll need [`node` and `npm`](https://nodejs.org/en/download/).
 
-`npm install`
+```
+npm install
+npm run start
+```
 
-Then depending on what you want to do (see below), run a script using `node`.
+## Development
 
-`node src/<SOME_SCRIPT>`
+`npm run watch`
+
+This will launch a running instance of the main app similar to the `start` command, except that any edits made in:
+
+* `/src` (backend)
+* `/gui` (frontend)
+
+will magically refresh the app! 
