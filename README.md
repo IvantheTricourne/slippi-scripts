@@ -10,7 +10,7 @@ A collection of Slippi scripts and other vaguely useful things.
 
 </div>
 
-<h2 align="center">Features</h2>
+## Features
 
 <div align="center">
 
@@ -20,7 +20,7 @@ _Visualize game/set stats!_
 
 </div>
 
-## how
+## Usage
 
 You'll need [`node` and `npm`](https://nodejs.org/en/download/).
 
