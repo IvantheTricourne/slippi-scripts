@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const yargs = require('yargs'); // npm install yargs
-const { getStats } = require('./stats.js');
+const { getStats } = require('../src/stats.js');
 
 // node script
 const argv = yargs
