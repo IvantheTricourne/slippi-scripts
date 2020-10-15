@@ -7,3 +7,5 @@ Slippi*
 combos.json
 elm-stuff/
 index.js
+dist/
+*.log
