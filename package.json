@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "A collection of Slippi scripts and other vaguely useful things",
     "dependencies": {
+        "@slippi/slippi-js": "^5.0.5",
         "chalk": "^3.0.0",
         "chokidar": "^3.3.1",
         "electron": "^10.1.2",
@@ -14,7 +15,6 @@
         "node-wav-player": "^0.1.0",
         "obs-websocket-js": "^4.0.1",
         "ora": "^4.0.3",
-        "slp-parser-js": "^4.1.0",
         "yargs": "^15.1.0"
     },
     "devDependencies": {
