@@ -1,6 +1,7 @@
 'use strict';
 const electron = require('electron');
 const chokidar = require('chokidar'); // add chokidar
+const { fork } = require('child_process');
 
 const app = electron.app; // this is our app
 const BrowserWindow = electron.BrowserWindow; // This is a Module that creates windows
@@ -13,6 +14,7 @@ app.on('ready', async () => {
         console.log('Running in dev Mode');
     } else {
         console.log('Running in prod mode');
+        var _ = fork('./src/server.js');
     }
     createWindow();
 }); // called when electron has initialized

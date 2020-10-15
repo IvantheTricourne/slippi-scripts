@@ -27,9 +27,8 @@
         "record": "node scripts/playback.js record -c ../config.json",
         "elm": "elm make gui/Main.elm --output app/index.js --optimize || true",
         "elm:watch": "chokidar '**/*.elm' -c 'npm run elm'",
-        "serve": "node src/server.js",
         "serve:watch": "nodemon src/server.js",
-        "start": "npm run elm & npm run serve & electron app/main.js",
+        "start": "npm run elm & electron app/main.js",
         "watch": "npm run elm & npm run elm:watch & npm run serve:watch & electron app/main.js true & wait",
         "test": "mocha"
     },
