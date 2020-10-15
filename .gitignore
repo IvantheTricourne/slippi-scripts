@@ -4,7 +4,8 @@ node_modules/
 Slippi
 Slippi-Test
 slp
-log.txt
+*.txt
 combos.json
 elm-stuff/
 index.js
+*.slp
