@@ -2,6 +2,6 @@ language: node_js
 node_js: node
 script:
   - echo 'Building elm'
-  - npm run elm
+  - yarn run elm
   - echo 'Running tests'
-  - npm run test
+  - yarn run test

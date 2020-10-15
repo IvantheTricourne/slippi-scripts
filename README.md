@@ -24,18 +24,18 @@ _Many more in the making!_
 
 ## Usage
 
-You'll need [`node` and `npm`](https://nodejs.org/en/download/).
+Download [`yarn`](https://classic.yarnpkg.com/en/docs/install/).
 
 ```
-npm install
-npm run start
+yarn install
+yarn run start
 ```
 
 ## Development
 
 ```
-npm install
-npm run watch
+yarn install
+yarn run watch
 ```
 
 This will launch an instance of the main app similar to the `start` command, except that any changes made in:

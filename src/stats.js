@@ -1,8 +1,8 @@
 const _ = require('lodash');
 const path = require('path');
 const fs = require('fs');
-const slp = require('slp-parser-js');
-const SlippiGame = slp.default; // npm install slp-parser-js
+const slp = require('@slippi/slippi-js');
+const SlippiGame = slp.default;
 
 // create player info object
 function makePlayerInfo(idx, settings, metadata) {

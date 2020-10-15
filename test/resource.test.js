@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const _ = require('lodash');
 const path = require('path');
-const slp = require('slp-parser-js');
+const slp = require('@slippi/slippi-js');
 
 // @NOTE: copy from elm
 // @TODO: maybe do this purely in getStats
