@@ -20,12 +20,12 @@ Then depending on what you want to do (see below), run a script using `node`.
 
 For usage information, see the `--help` option for any of the scripts below.
 
-1. Generate stats for a set of `.slp` files: `src/getStats.js`
+1. Generate stats for a set of `.slp` files: `getStats.js`
    * outputs a `stats.json` file
    * DEPRECATED: The GUI app handles generating the `.json` file now
-2. Generate a playback queue for several `.slp` files (and optionally a highlight reel): `src/getGames.js`
+2. Generate a playback queue for several `.slp` files (and optionally a highlight reel): `getGames.js`
    * provides general versus info (e.g. opponent tags, names, codes, etc.)
    * provides total play time on a per opponent basis
-3. Play/record the queue from (1): `src/playback.js`
+3. Play/record the queue from (1): `playback.js`
    * requires [OBS](https://obsproject.com/) with [`obs-websocket`](https://obsproject.com/forum/resources/obs-websocket-remote-control-obs-studio-from-websockets.466/) installed
    * requires a pre-setup `config.json`
