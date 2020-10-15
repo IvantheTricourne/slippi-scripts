@@ -7,19 +7,19 @@ const slp = require('slp-parser-js');
 // @NOTE: copy from elm
 // @TODO: maybe do this purely in getStats
 function charPortraitPath(charName, charColor) {
-    return path.join(process.cwd(), `rsrc/Characters/Portraits/${charName}/${charColor}.png`);
+    return path.join(process.cwd(), `app/rsrc/Characters/Portraits/${charName}/${charColor}.png`);
 }
 
 function charIconPath(charName, charColor) {
-    return path.join(process.cwd(), `rsrc/Characters/Stock Icons/${charName}/${charColor}.png`);
+    return path.join(process.cwd(), `app/rsrc/Characters/Stock Icons/${charName}/${charColor}.png`);
 }
 
 function fourStockCharIconPath(charName, charColor) {
-    return path.join(process.cwd(), `rsrc/Characters/Stock Icons/${charName}/${charColor}G.png`);
+    return path.join(process.cwd(), `app/rsrc/Characters/Stock Icons/${charName}/${charColor}G.png`);
 }
 
 function stageIconPath(stageName) {
-    return path.join(process.cwd(), `rsrc/Stages/Icons/${stageName}.png`);
+    return path.join(process.cwd(), `app/rsrc/Stages/Icons/${stageName}.png`);
 }
 
 _.each(slp.characters.getAllCharacters(), (character, i) => {

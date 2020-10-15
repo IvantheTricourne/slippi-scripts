@@ -211,7 +211,7 @@ viewStats stats =
                     , Border.rounded 5
                     , moveRight 25
                     , moveDown 5
-                    , padding 5
+                    , padding 1
                     , above <|
                         el
                             [ centerX
@@ -269,7 +269,7 @@ viewStats stats =
                     , Border.rounded 5
                     , moveLeft 25
                     , moveDown 5
-                    , padding 5
+                    , padding 1
                     , above <|
                         el
                             [ centerX
