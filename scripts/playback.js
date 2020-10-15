@@ -1,6 +1,6 @@
-const { sleep } = require('../src/utils.js');
-const { launchDolphin } = require('../src/dolphin.js');
-const { launchOBSWebsocket, recordOBSWebsocket} = require('../src/obs.js');
+const { sleep } = require('./utils.js');
+const { launchDolphin } = require('./dolphin.js');
+const { launchOBSWebsocket, recordOBSWebsocket} = require('./obs.js');
 const OBSWebSocket = require('obs-websocket-js');
 const yargs = require('yargs');
 const ora = require("ora");

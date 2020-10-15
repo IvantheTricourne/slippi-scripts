@@ -1,4 +1,4 @@
-const { sec2time } = require('../src/utils.js');
+const { sec2time } = require('./utils.js');
 // slippi deps
 const fs = require('fs');
 const _ = require('lodash');

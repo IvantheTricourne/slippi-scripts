@@ -1,4 +1,4 @@
-const { isWin, sleep, runCommand, kill } = require('../src/utils.js');
+const { isWin, sleep, runCommand, kill } = require('./utils.js');
 const OBSWebSocket = require('obs-websocket-js'); // npm install obs-websocket-js
 const obs = new OBSWebSocket();
 const { exec, execSync } = require("child_process");
