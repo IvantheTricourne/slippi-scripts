@@ -7,6 +7,7 @@ const app = electron.app; // this is our app
 const BrowserWindow = electron.BrowserWindow; // This is a Module that creates windows
 
 let mainWindow; // saves a global reference to mainWindow so it doesn't get garbage collected
+let serverProcess;
 
 app.on('ready', async () => {
     // process is in dev mod or nah
@@ -14,7 +15,7 @@ app.on('ready', async () => {
         console.log('Running in dev Mode');
     } else {
         console.log('Running in prod mode');
-        var _ = fork('./src/server.js');
+        serverProcess = fork('./src/server.js');
     }
     createWindow();
 }); // called when electron has initialized
@@ -48,6 +49,8 @@ function createWindow () {
 
 // when you close all the windows on a non-mac OS it quits the app
 app.on('window-all-closed', () => {
+    // kill server child process
+    process.kill(serverProcess.pid);
     if (process.platform !== 'darwin') { app.quit(); }
 });
 
