@@ -43,10 +43,12 @@ before_script:
 
 # on PRs and merges to master and prod run tests and build the app
 script:
-  - echo "Building elm"
-  - yarn run elm
-  - echo "Running tests"
-  - yarn run test
+  # - echo "Installing deps"
+  # - yarn install
+  # - echo "Building elm"
+  # - yarn run elm
+  # - echo "Running tests"
+  # - yarn run test
   - |
     if [ "$TRAVIS_OS_NAME" == "linux" ]; then
       docker run --rm \
@@ -54,24 +56,23 @@ script:
         -v ~/.cache/electron:/root/.cache/electron \
         -v ~/.cache/electron-builder:/root/.cache/electron-builder \
         electronuserland/builder:wine \
-        /bin/bash -c "yarn --link-duplicates --pure-lockfile && yarn release --linux --win"
+        /bin/bash -c "yarn --link-duplicates --pure-lockfile && yarn test --linux --win"
     else
-      yarn release
+      yarn test
     fi
 
-# # only deploy to github on a merge to the prod branch
-# deploy:
-#   provider: script
-#   script: bash deploy.travis.sh
-#   skip_cleanup: true
-#   on:
-#     branch: prod
+# only deploy to github on a merge to the prod branch
+deploy:
+  provider: script
+  script: bash deploy.travis.sh
+  skip_cleanup: true
+  on:
+    branch: master
 
 before_cache:
   - rm -rf $HOME/.cache/electron-builder/wine
 
-# only run this script on pull requests and merges into 
-# the 'master'
+# only run this script on pull requests and merges into 'master'
 branches:
   only:
   - master
