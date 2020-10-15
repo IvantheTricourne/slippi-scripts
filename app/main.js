@@ -13,11 +13,11 @@ app.on('ready', async () => {
     // process is in dev mod or nah
     if (process.argv[2]) {
         // dev mode runs a nodemon script to start the server
-        // see npm run watch
+        // see node script watch
         console.log('Running in dev mode');
     } else {
         // prod/demo mode
-        // see npm run start
+        // see node script start
         console.log('Running in prod mode');
         serverProcess = fork('./src/server.js');
     }
