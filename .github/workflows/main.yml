@@ -1,0 +1,32 @@
+# name of your github action
+name: Auto-release
+# this will help you specify where to run 
+on:
+  push:
+    branches:
+    # this will run on the electron branch
+      - master
+# this is where the magic happens, each job happens in parallel btw
+jobs:
+  build_on_mac:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        ref: master
+    - uses: actions/setup-node@master
+      with:
+        node-version: 10.16
+    - name: see directory
+      run: ls
+  build_on_linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        ref: feature/github-actions        
+    - uses: actions/setup-node@master
+      with:
+        node-version: 10.16
+    - name: see directory
+      run: ls
