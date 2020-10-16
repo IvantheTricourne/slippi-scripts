@@ -2,8 +2,7 @@ name: release
 on:
   push:
     branches:
-    # this will run on the master branch
-      - master
+      - 'v*'
 jobs:
   build-linux:
     runs-on: ubuntu-latest
