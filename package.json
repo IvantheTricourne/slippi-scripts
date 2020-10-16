@@ -30,7 +30,6 @@
     },
     "build": {
         "productName": "Slippi Scripts GUI",
-        "publish": "github",
         "appId": "com.ivanthetricourne.slippiscriptsgui",
         "files": [
             "app/",

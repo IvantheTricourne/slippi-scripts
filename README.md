@@ -4,6 +4,7 @@
 
 A collection of Slippi scripts and other vaguely useful things.
 
+[![Actions Status](https://github.com/IvantheTricourne/slippi-scripts/workflows/Auto-release/badge.svg)](https://github.com/IvantheTricourne/slippi-scripts/actions)
 [![Build Status](https://travis-ci.com/IvantheTricourne/slippi-scripts.svg?branch=master)](https://travis-ci.com/IvantheTricourne/slippi-scripts)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/IvantheTricourne/slippi-scripts/blob/master/LICENSE.txt)
 <a href="https://patreon.com/setBaNG"><img src="https://img.shields.io/endpoint.svg?url=https://moshef9.wixsite.com/patreon-badge/_functions/badge/?username=setBaNG" alt="Patreon donate button" /> </a>
