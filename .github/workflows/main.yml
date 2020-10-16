@@ -8,8 +8,11 @@ on:
       - master
 # this is where the magic happens, each job happens in parallel btw
 jobs:
-  build_on_mac:
-    runs-on: macOS-latest
+  build:
+    strategy:
+      matrix:
+        os: [ macOS-latest, ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@master
       with:
@@ -17,16 +20,11 @@ jobs:
     - uses: actions/setup-node@master
       with:
         node-version: 10.16
-    - name: see directory
+    - name: Sanity check
       run: ls
-  build_on_linux:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-      with:
-        ref: master      
-    - uses: actions/setup-node@master
-      with:
-        node-version: 10.16
-    - name: see directory
-      run: ls
+    - name: Install deps
+      run: yarn install
+    - name: Build release
+      run: yarn run release
+    - name: Check dist
+      run: ls dist
