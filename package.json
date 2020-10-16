@@ -36,7 +36,7 @@
             "src/",
             "package.json"
         ],
-        "artifactName": "Slippi-Scripts-GUI-${version}-${os}.${ext}",
+        "artifactName": "Slippi-Scripts-GUI.${ext}",
         "dmg": {
             "contents": [
                 {

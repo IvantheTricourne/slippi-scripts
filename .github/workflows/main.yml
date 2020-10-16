@@ -39,14 +39,23 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-    - name: Upload Release Asset
+    - name: Upload Release Asset - Linux
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/Slippi-Scripts-GUI*
+        asset_path: ./dist/Slippi-Scripts-GUI.AppImage
         asset_name: Slippi-Scripts-GUI
         asset_content_type: application/*
-
+    - name: Upload Release Asset - Windows
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/Slippi-Scripts-GUI.exe
+        asset_name: Slippi-Scripts-GUI
+        asset_content_type: application/*
