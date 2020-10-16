@@ -5,8 +5,8 @@ on:
     # this will run on the master branch
       - master
 jobs:
-  build:
-    # run on mac and linux
+  # run on mac and linux
+  build-unix:
     strategy:
       matrix:
         os: [ macOS-latest, ubuntu-latest ]
@@ -29,3 +29,9 @@ jobs:
       run: yarn release --publish never
     - name: Check dist
       run: ls dist
+    - name: Upload to release
+      uses: JasonEtco/upload-to-release@master
+      with:
+        args: dist/Slippi-Scripts-GUI*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
