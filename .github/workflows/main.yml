@@ -48,4 +48,5 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/Slippi-Scripts-GUI*
         asset_name: Slippi-Scripts-GUI
+        asset_type: application/*
 
