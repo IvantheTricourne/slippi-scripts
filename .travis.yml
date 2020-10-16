@@ -68,7 +68,7 @@ deploy:
     - dist/*.exe
   on:
     repo: IvantheTricourne/slippi-scripts
-  skip_cleanup: true
+  cleanup: false
   draft: true
 
 before_cache:
