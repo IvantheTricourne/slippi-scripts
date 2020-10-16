@@ -40,7 +40,7 @@ jobs:
         draft: false
         prerelease: false
     - name: Upload Release Asset - Linux
-      id: upload-release-asset
+      id: upload-release-asset-lin
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,7 +50,7 @@ jobs:
         asset_name: Slippi-Scripts-GUI
         asset_content_type: application/*
     - name: Upload Release Asset - Windows
-      id: upload-release-asset
+      id: upload-release-asset-win
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
