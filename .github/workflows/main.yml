@@ -1,30 +1,31 @@
-# name of your github action
-name: Auto-release
-# this will help you specify where to run 
+name: release
 on:
   push:
     branches:
-    # this will run on the electron branch
+    # this will run on the master branch
       - master
-# this is where the magic happens, each job happens in parallel btw
 jobs:
   build:
+    # run on mac and linux
     strategy:
       matrix:
         os: [ macOS-latest, ubuntu-latest ]
     runs-on: ${{ matrix.os }}
     steps:
+    # checkout master
     - uses: actions/checkout@master
       with:
         ref: master
+    # setup node
     - uses: actions/setup-node@master
       with:
         node-version: 10.16
+    # See if we're on the right repo lol
     - name: Sanity check
       run: ls
     - name: Install deps
       run: yarn install
     - name: Build release
-      run: yarn run release
+      run: yarn release --publish never
     - name: Check dist
       run: ls dist
