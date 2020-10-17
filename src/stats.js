@@ -39,6 +39,8 @@ function getGameWinner(game, player0, player1) {
     let latestFrame = game.getLatestFrame();
     let player0Frame = latestFrame.players[0];
     let player1Frame = latestFrame.players[1];
+    let gameEnd = game.getGameEnd();
+    //console.log(JSON.stringify(gameEnd, null, 2));
     // console.log(JSON.stringify(Object.keys(game), null, 2));
     // console.log(JSON.stringify(game.actionsComputer, null, 2));
     // console.log(JSON.stringify(latestFrame, null, 2));
@@ -68,10 +70,65 @@ function getGameWinner(game, player0, player1) {
         };
     } else {
         // game ended with even stocks
-        return {
-            winner: noOneWins,
-            stocks: 0
-        };
+        if (gameEnd.gameEndMethod === 1) {
+            // Timeout determine percents
+            if (player0Frame.post.percent < player1Frame.post.percent) {
+                // player 0 has less percent
+                return {
+                    winner: player0,
+                    stocks: player0Frame.post.stocksRemaining
+                };
+            } else if (player1Frame.post.percent < player0Frame.post.percent) {
+                // player 1 has less percent
+                return {
+                    winner: player1,
+                    stocks: player1Frame.post.stocksRemaining
+                };
+            } else {
+                // game ended in equal percents
+                // A SUDDEN DEATH!
+                // @TODO: Make this more obvious
+                return {
+                    winner: noOneWins,
+                    stocks: 0
+                };
+            };
+        } else if (gameEnd.gameEndMethod === 2) {
+            // normal game end, but both died at the same time
+            // A SUDDEN DEATH!
+            // @TODO: Make this more obvious
+            return {
+                winner: noOneWins,
+                stocks: 0
+            };
+        } else if (gameEnd.gameEndMethod === 7) {
+            // No contest, more than likely someone LRAStarted
+            // the lrasInitiatorIndex determines who lost
+            if (gameEnd.lrasInitiatorIndex === 0) {
+                // player 0 quit
+                return {
+                    winner: player1,
+                    stocks: player1Frame.post.stocksRemaining
+                };
+            } else if (gameEnd.lrasInitiatorIndex === 1) {
+                // player 1 quit
+                return {
+                    winner: player0,
+                    stocks: player0Frame.post.stocksRemaining
+                };
+            } else {
+                // something unknown happened
+                return {
+                    winner: noOneWins,
+                    stocks: 0
+                };
+            }
+        } else {
+            return {
+                winner: noOneWins,
+                stocks: 0
+            };
+        }
     }
 }
 // get most used move
