@@ -40,6 +40,7 @@ function getGameWinner(game, player0, player1) {
     let player0Frame = latestFrame.players[0];
     let player1Frame = latestFrame.players[1];
     // console.log(JSON.stringify(Object.keys(game), null, 2));
+    // console.log(JSON.stringify(game.actionsComputer, null, 2));
     // console.log(JSON.stringify(latestFrame, null, 2));
     let noOneWins = {
         port: 5,
@@ -155,16 +156,9 @@ const characterSagaDict = {
 function getSagaIconName(statsJson) {
     let player0Kills = statsJson.playerStats[0].kills;
     let player1Kills = statsJson.playerStats[1].kills;
-    let player0Wins = 0;
-    let player1Wins = 0;
-    _.each(statsJson.games, (game, i) => {
-        let player = game.winner;
-        if (player.idx === 0) {
-            player0Wins += 1;
-        } else {
-            player1Wins += 1;
-        }
-    });
+    let player0Wins = statsJson.playerStats[0].wins;
+    let player1Wins = statsJson.playerStats[1].wins;
+    // console.log(player0Wins, player1Wins);
     if (player0Wins > player1Wins) {
         return characterSagaDict[statsJson.players[0].character.characterName];
     } else if (player1Wins > player0Wins) {
@@ -229,6 +223,7 @@ function getStats(files, players = []) {
             // since it is less intensive to get the settings we do that first
             const settings = game.getSettings();
             const metadata = game.getMetadata();
+            // console.log(JSON.stringify(metadata,null,2));
             const gameDate = new Date(metadata.startAt);
             // calculate game length in seconds
             const gameLength = metadata.lastFrame / 60;
@@ -305,8 +300,10 @@ function getStats(files, players = []) {
                 winner,
                 stocks
             } = getGameWinner(game, player0, player1);
-            // console.log(JSON.stringify(gameWinner, null, 2));
-            statsJson.playerStats[winner.idx].wins += 1;
+            // console.log(JSON.stringify(winner, null, 2));
+            if (statsJson.playerStats[winner.idx] !== undefined) {
+                statsJson.playerStats[winner.idx].wins += 1;
+            }
             // track stages, winner, total games and set length
             statsJson.games.push({
                 stage: slp.stages.getStageName(settings.stageId),
@@ -352,6 +349,7 @@ function getStats(files, players = []) {
     // console.log(JSON.stringify(statsJson.players, null, 2));
     // determine which saga icon to use
     // console.log(JSON.stringify(statsJson.players, null, 2));
+    // console.log(getSagaIconName(statsJson));
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
     let totalGames = statsJson.totalGames;
