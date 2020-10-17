@@ -1,16 +1,15 @@
 'use strict';
 const electron = require('electron');
 const chokidar = require('chokidar'); // add chokidar
-const { fork } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 
 const app = electron.app; // this is our app
 const BrowserWindow = electron.BrowserWindow; // This is a Module that creates windows
 
 let mainWindow; // saves a global reference to mainWindow so it doesn't get garbage collected
-let serverProcess; // global reference to server child process for prod mode
 
 app.on('ready', async () => {
+    // start the backend server
     // process is in dev mod or nah
     if (process.argv[2]) {
         // dev mode runs a nodemon script to start the server
@@ -21,8 +20,9 @@ app.on('ready', async () => {
         // see node script start
         console.log('Running in prod mode');
         autoUpdater.checkForUpdatesAndNotify();
-        serverProcess = fork('./src/server.js');
+        const serverProcess = require('../src/server.js');
     }
+    // start the gui
     createWindow();
 }); // called when electron has initialized
 
@@ -55,8 +55,6 @@ function createWindow () {
 
 // when you close all the windows on a non-mac OS it quits the app
 app.on('window-all-closed', () => {
-    // kill server child process
-    if (serverProcess !== undefined) { process.kill(serverProcess.pid); }
     if (process.platform !== 'darwin') { app.quit(); }
 });
 
