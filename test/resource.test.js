@@ -3,6 +3,7 @@ const fs = require('fs');
 const _ = require('lodash');
 const path = require('path');
 const slp = require('@slippi/slippi-js');
+const { characterSagaDict } = require('../src/stats.js');
 
 // @NOTE: copy from elm
 // @TODO: maybe do this purely in getStats
@@ -18,12 +19,30 @@ function fourStockCharIconPath(charName, charColor) {
     return path.join(process.cwd(), `app/rsrc/Characters/Stock Icons/${charName}/${charColor}G.png`);
 }
 
+function sagaIconPath(charName) {
+    let sagaIconName = characterSagaDict[charName];
+    return path.join(process.cwd(), `app/rsrc/Characters/Saga Icons/${sagaIconName}.png`);
+}
+
+function goldSagaIconPath(charName) {
+    let goldSagaIconName = characterSagaDict[charName];
+    return path.join(process.cwd(), `app/rsrc/Characters/Saga Icons/${goldSagaIconName}G.png`);
+}
+
 function stageIconPath(stageName) {
     return path.join(process.cwd(), `app/rsrc/Stages/Icons/${stageName}.png`);
 }
 
 _.each(slp.characters.getAllCharacters(), (character, i) => {
     describe(`${character.name} can be visualized`, () => {
+        it("Saga Icon", () => {
+            let sagaPath = sagaIconPath(character.name);
+            assert.ok(fs.existsSync(sagaPath), `${sagaPath} does not exist`);
+        });
+        it("Gold Saga Icon", () => {
+            let goldSagaPath = goldSagaIconPath(character.name);
+            assert.ok(fs.existsSync(goldSagaPath), `${goldSagaPath} does not exist`);
+        });
         _.each(character.colors, (color, j) => {
             it(`${color} Portrait`, () => {
                 let portraitPath = charPortraitPath(character.name, color);

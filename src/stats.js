@@ -366,4 +366,5 @@ function getStats(files, players = []) {
     // console.log(JSON.stringify(statsJson, null, 2));
     return statsJson;
 }
+exports.characterSagaDict = characterSagaDict;
 exports.getStats = getStats;
