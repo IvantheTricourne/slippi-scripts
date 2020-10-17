@@ -34,14 +34,21 @@ Download for your operating system using the links below or check out [the relea
 - [MacOS](https://github.com/IvantheTricourne/slippi-scripts/releases/latest/download/Slippi-Scripts-GUI.dmg)
 - [Linux](https://github.com/IvantheTricourne/slippi-scripts/releases/latest/download/Slippi-Scripts-GUI.AppImage)
 
-## Usage
-
-Download [`yarn`](https://classic.yarnpkg.com/en/docs/install/).
+Alternatively, you can clone this repo, then using [`yarn`](https://classic.yarnpkg.com/en/docs/install/):
 
 ```
 yarn install
 yarn run start
 ```
+
+## Usage
+
+* _Visualize game/set stats_:
+  * The application launches in the "Home" screen with the smash logo
+  * Click the smash logo to launch a file selection window
+  * In the file selection window, select one or more `.slp` files (i.e., use Shift + arrow keys or Shift + click)
+  * The application will load and show the combined stats for the provided `.slp` files!
+  * To select a different set of files, click the golden center icon to return to the "Home" screen
 
 ## Development
 
