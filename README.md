@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="app/rsrc/icon.png" alt="Slippi Scripts Logo" width="100" height="100" />
+</p>
 <h1 align="center">Slippi Scripts</h1>
 
 <div align="center">

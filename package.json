@@ -37,6 +37,7 @@
             "src/",
             "package.json"
         ],
+        "icon": "app/rsrc/icon.png",
         "artifactName": "Slippi-Scripts-GUI.${ext}",
         "dmg": {
             "contents": [
