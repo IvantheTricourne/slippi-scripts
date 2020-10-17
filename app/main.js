@@ -2,6 +2,7 @@
 const electron = require('electron');
 const chokidar = require('chokidar'); // add chokidar
 const { fork } = require('child_process');
+const { autoUpdater } = require('electron-updater');
 
 const app = electron.app; // this is our app
 const BrowserWindow = electron.BrowserWindow; // This is a Module that creates windows
@@ -19,6 +20,7 @@ app.on('ready', async () => {
         // prod/demo mode
         // see node script start
         console.log('Running in prod mode');
+        autoUpdater.checkForUpdatesAndNotify();
         serverProcess = fork('./src/server.js');
     }
     createWindow();
