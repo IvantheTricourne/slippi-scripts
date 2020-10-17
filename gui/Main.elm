@@ -191,7 +191,7 @@ viewStats stats =
                     ]
             )
         ]
-        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ ".png"
+        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ "G.png"
         , description = "Logo for set winner"
         }
     , row
