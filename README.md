@@ -26,6 +26,14 @@ _Many more in the making!_
 
 </div>
 
+## Download
+
+Download for your operating system using the links below or check out [the releases page](https://github.com/IvantheTricourne/slippi-scripts/releases) for more information.
+
+- [Windows](https://github.com/IvantheTricourne/slippi-scripts/releases/latest/download/Slippi-Scripts-GUI.exe)
+- [MacOS](https://github.com/IvantheTricourne/slippi-scripts/releases/latest/download/Slippi-Scripts-GUI.dmg)
+- [Linux](https://github.com/IvantheTricourne/slippi-scripts/releases/latest/download/Slippi-Scripts-GUI.AppImage)
+
 ## Usage
 
 Download [`yarn`](https://classic.yarnpkg.com/en/docs/install/).
