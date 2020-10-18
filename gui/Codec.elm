@@ -9,6 +9,8 @@ module Codec exposing
     , playerEncoder
     , playerStatDecoder
     , playerStatEncoder
+    , statsDecoder
+    , statsEncoder
     )
 
 import Json.Decode as D
@@ -18,6 +20,17 @@ import Types exposing (..)
 
 
 -- encoders
+
+
+statsEncoder : Stats -> E.Value
+statsEncoder stats =
+    E.object
+        [ ( "games", E.array gameEncoder stats.games )
+        , ( "totalLengthSeconds", E.float stats.totalLengthSeconds )
+        , ( "players", E.array playerEncoder stats.players )
+        , ( "playerStats", E.array playerStatEncoder stats.playerStats )
+        , ( "sagaIcon", E.string stats.sagaIcon )
+        ]
 
 
 gameEncoder : Game -> E.Value
@@ -83,6 +96,16 @@ favoriteMoveEncoder favMov =
 
 
 -- decoders
+
+
+statsDecoder : D.Decoder Stats
+statsDecoder =
+    D.map5 Stats
+        (D.field "games" <| D.array gameDecoder)
+        (D.field "totalLengthSeconds" D.float)
+        (D.field "players" <| D.array playerDecoder)
+        (D.field "playerStats" <| D.array playerStatDecoder)
+        (D.field "sagaIcon" <| D.string)
 
 
 gameDecoder : D.Decoder Game

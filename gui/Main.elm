@@ -38,7 +38,7 @@ type Msg
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
-    | Uploaded (Result Http.Error Stats)
+    | Uploaded (Result Http.Error StatsResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,8 +59,19 @@ update msg model =
 
         Uploaded result ->
             case result of
-                Ok stats ->
-                    ( Done stats, Cmd.none )
+                Ok statsResponse ->
+                    if statsResponse.totalGames == 0 then
+                        ( Fail <| D.Failure "No valid games found" statsResponse.stats
+                        , Cmd.none
+                        )
+
+                    else
+                        case D.decodeValue statsDecoder statsResponse.stats of
+                            Ok stats ->
+                                ( Done stats, Cmd.none )
+
+                            Err statsDErr ->
+                                ( Fail statsDErr, Cmd.none )
 
                 Err err ->
                     ( Fail <| httpErrToJsonErr err, Cmd.none )
@@ -77,7 +88,7 @@ update msg model =
                 , url = "http://localhost:8080/stats/upload"
                 , headers = []
                 , body = Http.multipartBody (List.map (Http.filePart "multipleFiles") (file :: files))
-                , expect = Http.expectJson Uploaded statsDecoder
+                , expect = Http.expectJson Uploaded statsResponseDecoder
                 , timeout = Nothing
                 , tracker = Just "upload"
                 }
@@ -88,16 +99,16 @@ httpErrToJsonErr : Http.Error -> D.Error
 httpErrToJsonErr httpErr =
     case httpErr of
         Http.BadUrl str ->
-            D.Failure "BadUrl" (E.object [ ( "msg", E.string str ) ])
+            D.Failure "BadUrl" (E.object [ ( "url", E.string str ) ])
 
         Http.Timeout ->
             D.Failure "Timeout" (E.object [ ( "msg", E.string "response timeout" ) ])
 
         Http.NetworkError ->
-            D.Failure "NetworkError" (E.object [ ( "msg", E.string "network error" ) ])
+            D.Failure "NetworkError" (E.object [ ( "msg", E.string "server connection issue" ) ])
 
         Http.BadStatus int ->
-            D.Failure "Bad Status" (E.object [ ( "msg", E.string "Bad Status" ) ])
+            D.Failure "Bad Status" (E.object [ ( "status-code", E.int int ) ])
 
         Http.BadBody str ->
             D.Failure "Bad Body" (E.string str)
@@ -639,25 +650,14 @@ encode model =
             E.object []
 
         Done stats ->
-            E.object
-                [ ( "totalGames", E.int stats.totalGames )
-                , ( "games", E.array gameEncoder stats.games )
-                , ( "totalLengthSeconds", E.float stats.totalLengthSeconds )
-                , ( "players", E.array playerEncoder stats.players )
-                , ( "playerStats", E.array playerStatEncoder stats.playerStats )
-                , ( "sagaIcon", E.string stats.sagaIcon )
-                ]
+            statsEncoder stats
 
 
-statsDecoder : D.Decoder Stats
-statsDecoder =
-    D.map6 Stats
+statsResponseDecoder : D.Decoder StatsResponse
+statsResponseDecoder =
+    D.map2 StatsResponse
         (D.field "totalGames" D.int)
-        (D.field "games" <| D.array gameDecoder)
-        (D.field "totalLengthSeconds" D.float)
-        (D.field "players" <| D.array playerDecoder)
-        (D.field "playerStats" <| D.array playerStatDecoder)
-        (D.field "sagaIcon" <| D.string)
+        (D.field "stats" D.value)
 
 
 defaultPlayer : Player

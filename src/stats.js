@@ -236,8 +236,8 @@ function getStats(files, players = []) {
     var player0Chars = [];
     var player1Info = {};
     var player1Chars = [];
+    var totalGames = 0;
     var statsJson = {
-        "totalGames": 0,
         "games": [],
         "totalLengthSeconds": 0,
         "players": null,
@@ -370,7 +370,7 @@ function getStats(files, players = []) {
                 // @NOTE: this field is not used by the frontend (yet)
                 date: gameDate
             });
-            statsJson.totalGames += 1;
+            totalGames += 1;
             statsJson.totalLengthSeconds += paddedGameLength;
         } catch (err) {
             fs.appendFileSync("./get-stats-log.txt", `${err.stack}\n\n`);
@@ -378,10 +378,10 @@ function getStats(files, players = []) {
         }
     });
     // warn if no games were found
-    if (statsJson.totalGames === 0) {
+    if (totalGames === 0) {
         console.log("WARNING: No valid games found!");
     } else {
-        console.log(`Found ${statsJson.totalGames} games.`);
+        console.log(`Found ${totalGames} games.`);
     }
     // sort games in case files were uploaded out of order
     statsJson.games.sort((a, b) => a.date - b.date);
@@ -409,7 +409,6 @@ function getStats(files, players = []) {
     // console.log(getSagaIconName(statsJson));
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
-    let totalGames = statsJson.totalGames;
     _.each(playerTotals, (totals, i) => {
         // console.log(totals);
         statsJson.playerStats[i].avgs.avgApm = totals.apms / totalGames;
@@ -419,7 +418,9 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
     // console.log(JSON.stringify(statsJson, null, 2));
-    return statsJson;
+    return { totalGames: totalGames,
+             stats: statsJson
+           };
 }
 exports.characterSagaDict = characterSagaDict;
 exports.getStats = getStats;
