@@ -136,6 +136,20 @@ function getMostUsedMove(arr) {
     var mf = 1;
     var m = 0;
     var item;
+    // when someone doesn't move or gets 0 kills
+    if (arr.length === 0) {
+        return {
+            moveName: "n/a",
+            timesUsed: 0
+        };
+    }
+    // if someone just does one thing or gets only 1 kill
+    if (arr.length === 1) {
+        return {
+            moveName: arr[0],
+            timesUsed: 1
+        };
+    }
     for (var i = 0; i < arr.length; i++) {
         for (var j = i; j < arr.length; j++) {
             if (arr[i] == arr[j])
@@ -157,6 +171,7 @@ function getMostUsedChar(arr) {
     var mf = 1;
     var m = 0;
     var item;
+    // when someone is a solo main
     if (arr.length === 1) {
         return {
             character: arr[0],
@@ -319,8 +334,8 @@ function getStats(files, players = []) {
             _.each(stats.overall, (playerStats, i) => {
                 totalKills += playerStats.killCount;
             });
-            if (gameLength < 60 && totalKills < 3) {
-                console.log(`File ${i+1} | Game excluded: <60secs + <3 kills`);
+            if (gameLength < 60 && totalKills < 2) {
+                console.log(`File ${i+1} | Game excluded: <60secs + <2 kills`);
                 return;
             }
             // write first player info
