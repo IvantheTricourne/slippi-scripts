@@ -478,6 +478,28 @@ renderStageAndWinnerIcon gameNum gameInfo =
             ++ [ Border.rounded 3
                , scale 1.1
                , padding 1
+
+               -- , alpha 0.7
+               , inFront <|
+                    el
+                        [ Font.extraBold
+                        , Font.color black
+                        , Font.shadow
+                            { offset = ( -1, -1 )
+                            , blur = 0
+                            , color = white
+                            }
+                        , Font.shadow
+                            { offset = ( -2, 2 )
+                            , blur = 0
+                            , color = white
+                            }
+                        , alpha 1
+                        , centerX
+                        , centerY
+                        , scale 0.75
+                        ]
+                        (text gameInfo.length)
                , above <|
                     el
                         [ centerX

@@ -40,7 +40,7 @@ function getGameWinner(game, player0, player1) {
     let player0Frame = latestFrame.players[0];
     let player1Frame = latestFrame.players[1];
     let gameEnd = game.getGameEnd();
-    //console.log(JSON.stringify(gameEnd, null, 2));
+    // console.log(JSON.stringify(gameEnd, null, 2));
     // console.log(JSON.stringify(Object.keys(game), null, 2));
     // console.log(JSON.stringify(game.actionsComputer, null, 2));
     // console.log(JSON.stringify(latestFrame, null, 2));
@@ -246,6 +246,16 @@ function getSagaIconName(statsJson) {
     }
 }
 
+function sec2time(timeInSeconds) {
+    var pad = function(num, size) { return ('000' + num).slice(size * -1); },
+        time = parseFloat(timeInSeconds).toFixed(3),
+        // hours = Math.floor(time / 60 / 60),
+        minutes = Math.floor(time / 60) % 60,
+        seconds = Math.floor(time - minutes * 60),
+        milliseconds = time.slice(-3);
+    return minutes + ':' + pad(seconds, 2);
+}
+
 function getStats(files, players = []) {
     var player0Info = {};
     var player0Chars = [];
@@ -382,6 +392,7 @@ function getStats(files, players = []) {
                 winner: winner,
                 stocks: stocks,
                 players: [player0, player1],
+                length: sec2time(gameLength),
                 // @NOTE: this field is not used by the frontend (yet)
                 date: gameDate
             });
@@ -432,7 +443,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
-    // console.log(JSON.stringify(statsJson, null, 2));
+    console.log(JSON.stringify(statsJson, null, 2));
     return { totalGames: totalGames,
              stats: statsJson
            };

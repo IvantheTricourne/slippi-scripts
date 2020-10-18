@@ -34,6 +34,7 @@ type alias Game =
     , winner : Player
     , stocks : Int
     , players : Array Player
+    , length : String
     }
 
 

@@ -40,6 +40,7 @@ gameEncoder game =
         , ( "winner", playerEncoder game.winner )
         , ( "stocks", E.int game.stocks )
         , ( "players", E.array playerEncoder game.players )
+        , ( "length", E.string game.length )
         ]
 
 
@@ -110,11 +111,12 @@ statsDecoder =
 
 gameDecoder : D.Decoder Game
 gameDecoder =
-    D.map4 Game
+    D.map5 Game
         (D.field "stage" D.string)
         (D.field "winner" playerDecoder)
         (D.field "stocks" D.int)
         (D.field "players" <| D.array playerDecoder)
+        (D.field "length" D.string)
 
 
 characterDecoder : D.Decoder Character
