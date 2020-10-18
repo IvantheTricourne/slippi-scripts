@@ -66,6 +66,6 @@ will magically refresh the app with the appropriate changes!
 
 ## Acknowledgements
 
-* My girlfriend ❤️ [Lynne Fae](https://github.com/lynnefae) her undying support and art contributions to this project
+* My girlfriend ❤️ [Lynne Fae](https://github.com/lynnefae) for her undying support and art contributions to this project
 * [Jas Laferriere](https://github.com/JLaferri) and the [Project Slippi](https://github.com/project-slippi) team
 
