@@ -358,7 +358,6 @@ function getStats(files, players = []) {
             player1Chars.push(player1.character);
             // update kill percent sums
             let playerGameKillPercentSums = [0, 0];
-            // console.log(JSON.stringify(game.stockComputer.stocks, null, 2));
             _.each(game.stockComputer.stocks, (stock, i) => {
                 if (stock.deathAnimation !== null) {
                     // console.log(JSON.stringify(stock, null, 2));
@@ -368,8 +367,7 @@ function getStats(files, players = []) {
             });
             // console.log(playerGameKillPercentSums);
             // get moves from conversions and combos
-            _.each(stats.combos, (combo, i) => {
-            // _.each(stats.combos.concat(stats.conversions), (combo, i) => {
+            _.each(stats.conversions, (combo, i) => {
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
                 playerTotals[combo.playerIndex].moves = playerTotals[combo.playerIndex]
                     .moves
