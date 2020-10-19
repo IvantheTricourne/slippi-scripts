@@ -7,14 +7,21 @@ module Types exposing
     , PlayerStat
     , PlayerStatAvgs
     , Stats
+    , StatsResponse
     )
 
 import Array exposing (Array)
+import Json.Decode exposing (Value)
+
+
+type alias StatsResponse =
+    { totalGames : Int
+    , stats : Value
+    }
 
 
 type alias Stats =
-    { totalGames : Int
-    , games : Array Game
+    { games : Array Game
     , totalLengthSeconds : Float
     , players : Array Player
     , playerStats : Array PlayerStat
@@ -27,6 +34,7 @@ type alias Game =
     , winner : Player
     , stocks : Int
     , players : Array Player
+    , length : String
     }
 
 
@@ -51,6 +59,7 @@ type alias PlayerStatAvgs =
     { avgApm : Float
     , avgOpeningsPerKill : Float
     , avgDamagePerOpening : Float
+    , avgKillPercent : Float
     }
 
 

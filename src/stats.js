@@ -39,7 +39,10 @@ function getGameWinner(game, player0, player1) {
     let latestFrame = game.getLatestFrame();
     let player0Frame = latestFrame.players[0];
     let player1Frame = latestFrame.players[1];
+    let gameEnd = game.getGameEnd();
+    // console.log(JSON.stringify(gameEnd, null, 2));
     // console.log(JSON.stringify(Object.keys(game), null, 2));
+    // console.log(JSON.stringify(game.actionsComputer, null, 2));
     // console.log(JSON.stringify(latestFrame, null, 2));
     let noOneWins = {
         port: 5,
@@ -67,10 +70,65 @@ function getGameWinner(game, player0, player1) {
         };
     } else {
         // game ended with even stocks
-        return {
-            winner: noOneWins,
-            stocks: 0
-        };
+        if (gameEnd.gameEndMethod === 1) {
+            // Timeout determine percents
+            if (player0Frame.post.percent < player1Frame.post.percent) {
+                // player 0 has less percent
+                return {
+                    winner: player0,
+                    stocks: player0Frame.post.stocksRemaining
+                };
+            } else if (player1Frame.post.percent < player0Frame.post.percent) {
+                // player 1 has less percent
+                return {
+                    winner: player1,
+                    stocks: player1Frame.post.stocksRemaining
+                };
+            } else {
+                // game ended in equal percents
+                // A SUDDEN DEATH!
+                // @TODO: Make this more obvious
+                return {
+                    winner: noOneWins,
+                    stocks: 0
+                };
+            };
+        } else if (gameEnd.gameEndMethod === 2) {
+            // normal game end, but both died at the same time
+            // A SUDDEN DEATH!
+            // @TODO: Make this more obvious
+            return {
+                winner: noOneWins,
+                stocks: 0
+            };
+        } else if (gameEnd.gameEndMethod === 7) {
+            // No contest, more than likely someone LRAStarted
+            // the lrasInitiatorIndex determines who lost
+            if (gameEnd.lrasInitiatorIndex === 0) {
+                // player 0 quit
+                return {
+                    winner: player1,
+                    stocks: player1Frame.post.stocksRemaining
+                };
+            } else if (gameEnd.lrasInitiatorIndex === 1) {
+                // player 1 quit
+                return {
+                    winner: player0,
+                    stocks: player0Frame.post.stocksRemaining
+                };
+            } else {
+                // something unknown happened
+                return {
+                    winner: noOneWins,
+                    stocks: 0
+                };
+            }
+        } else {
+            return {
+                winner: noOneWins,
+                stocks: 0
+            };
+        }
     }
 }
 // get most used move
@@ -78,6 +136,20 @@ function getMostUsedMove(arr) {
     var mf = 1;
     var m = 0;
     var item;
+    // when someone doesn't move or gets 0 kills
+    if (arr.length === 0) {
+        return {
+            moveName: "n/a",
+            timesUsed: 0
+        };
+    }
+    // if someone just does one thing or gets only 1 kill
+    if (arr.length === 1) {
+        return {
+            moveName: arr[0],
+            timesUsed: 1
+        };
+    }
     for (var i = 0; i < arr.length; i++) {
         for (var j = i; j < arr.length; j++) {
             if (arr[i] == arr[j])
@@ -99,6 +171,7 @@ function getMostUsedChar(arr) {
     var mf = 1;
     var m = 0;
     var item;
+    // when someone is a solo main
     if (arr.length === 1) {
         return {
             character: arr[0],
@@ -155,16 +228,9 @@ const characterSagaDict = {
 function getSagaIconName(statsJson) {
     let player0Kills = statsJson.playerStats[0].kills;
     let player1Kills = statsJson.playerStats[1].kills;
-    let player0Wins = 0;
-    let player1Wins = 0;
-    _.each(statsJson.games, (game, i) => {
-        let player = game.winner;
-        if (player.idx === 0) {
-            player0Wins += 1;
-        } else {
-            player1Wins += 1;
-        }
-    });
+    let player0Wins = statsJson.playerStats[0].wins;
+    let player1Wins = statsJson.playerStats[1].wins;
+    // console.log(player0Wins, player1Wins);
     if (player0Wins > player1Wins) {
         return characterSagaDict[statsJson.players[0].character.characterName];
     } else if (player1Wins > player0Wins) {
@@ -180,13 +246,23 @@ function getSagaIconName(statsJson) {
     }
 }
 
+function sec2time(timeInSeconds) {
+    var pad = function(num, size) { return ('000' + num).slice(size * -1); },
+        time = parseFloat(timeInSeconds).toFixed(3),
+        // hours = Math.floor(time / 60 / 60),
+        minutes = Math.floor(time / 60) % 60,
+        seconds = Math.floor(time - minutes * 60),
+        milliseconds = time.slice(-3);
+    return minutes + ':' + pad(seconds, 2);
+}
+
 function getStats(files, players = []) {
     var player0Info = {};
     var player0Chars = [];
     var player1Info = {};
     var player1Chars = [];
+    var totalGames = 0;
     var statsJson = {
-        "totalGames": 0,
         "games": [],
         "totalLengthSeconds": 0,
         "players": null,
@@ -213,14 +289,16 @@ function getStats(files, players = []) {
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
             "moves": [],
-            "killMoves": []
+            "killMoves": [],
+            "killPercentGameAvgs": 0
         },
         {
             "apms": 0,
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
             "moves": [],
-            "killMoves": []
+            "killMoves": [],
+            "killPercentGameAvgs": 0
         }
     ];
     _.each(files, (file, i) => {
@@ -229,6 +307,7 @@ function getStats(files, players = []) {
             // since it is less intensive to get the settings we do that first
             const settings = game.getSettings();
             const metadata = game.getMetadata();
+            // console.log(JSON.stringify(metadata,null,2));
             const gameDate = new Date(metadata.startAt);
             // calculate game length in seconds
             const gameLength = metadata.lastFrame / 60;
@@ -267,8 +346,8 @@ function getStats(files, players = []) {
             _.each(stats.overall, (playerStats, i) => {
                 totalKills += playerStats.killCount;
             });
-            if (gameLength < 60 && totalKills < 3) {
-                console.log(`File ${i+1} | Game excluded: <60secs + <3 kills`);
+            if (gameLength < 60 && totalKills < 2) {
+                console.log(`File ${i+1} | Game excluded: <60secs + <2 kills`);
                 return;
             }
             // write first player info
@@ -277,8 +356,18 @@ function getStats(files, players = []) {
             // track char info
             player0Chars.push(player0.character);
             player1Chars.push(player1.character);
+            // update kill percent sums
+            let playerGameKillPercentSums = [0, 0];
+            _.each(game.stockComputer.stocks, (stock, i) => {
+                if (stock.deathAnimation !== null) {
+                    // console.log(JSON.stringify(stock, null, 2));
+                    // console.log(`${stock.opponentIndex} kills ${stock.playerIndex} @ ${stock.endPercent}`);
+                    playerGameKillPercentSums[stock.opponentIndex] += stock.endPercent;
+                }
+            });
+            // console.log(playerGameKillPercentSums);
             // get moves from conversions and combos
-            _.each(stats.combos.concat(stats.conversions), (combo, i) => {
+            _.each(stats.conversions, (combo, i) => {
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
                 playerTotals[combo.playerIndex].moves = playerTotals[combo.playerIndex]
                     .moves
@@ -289,6 +378,7 @@ function getStats(files, players = []) {
                 }
             });
             // update stats
+            // console.log(JSON.stringify(stats.overall, null, 2));
             _.each(stats.overall, (playerStats, i) => {
                 // sum things
                 statsJson.playerStats[i].totalDamage += playerStats.totalDamage;
@@ -299,24 +389,30 @@ function getStats(files, players = []) {
                 playerTotals[i].apms += playerStats.inputsPerMinute.ratio;
                 playerTotals[i].openingsPerKills += playerStats.openingsPerKill.ratio;
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
+                if (playerStats.killCount !== 0) {
+                    playerTotals[i].killPercentGameAvgs += playerGameKillPercentSums[i] / playerStats.killCount;
+                }
             });
             // update win counts
             let {
                 winner,
                 stocks
             } = getGameWinner(game, player0, player1);
-            // console.log(JSON.stringify(gameWinner, null, 2));
-            statsJson.playerStats[winner.idx].wins += 1;
+            // console.log(JSON.stringify(winner, null, 2));
+            if (statsJson.playerStats[winner.idx] !== undefined) {
+                statsJson.playerStats[winner.idx].wins += 1;
+            }
             // track stages, winner, total games and set length
             statsJson.games.push({
                 stage: slp.stages.getStageName(settings.stageId),
                 winner: winner,
                 stocks: stocks,
                 players: [player0, player1],
+                length: sec2time(gameLength),
                 // @NOTE: this field is not used by the frontend (yet)
                 date: gameDate
             });
-            statsJson.totalGames += 1;
+            totalGames += 1;
             statsJson.totalLengthSeconds += paddedGameLength;
         } catch (err) {
             fs.appendFileSync("./get-stats-log.txt", `${err.stack}\n\n`);
@@ -324,10 +420,10 @@ function getStats(files, players = []) {
         }
     });
     // warn if no games were found
-    if (statsJson.totalGames === 0) {
+    if (totalGames === 0) {
         console.log("WARNING: No valid games found!");
     } else {
-        console.log(`Found ${statsJson.totalGames} games.`);
+        console.log(`Found ${totalGames} games.`);
     }
     // sort games in case files were uploaded out of order
     statsJson.games.sort((a, b) => a.date - b.date);
@@ -352,19 +448,22 @@ function getStats(files, players = []) {
     // console.log(JSON.stringify(statsJson.players, null, 2));
     // determine which saga icon to use
     // console.log(JSON.stringify(statsJson.players, null, 2));
+    // console.log(getSagaIconName(statsJson));
     statsJson.sagaIcon = getSagaIconName(statsJson);
     // write avgs
-    let totalGames = statsJson.totalGames;
     _.each(playerTotals, (totals, i) => {
         // console.log(totals);
         statsJson.playerStats[i].avgs.avgApm = totals.apms / totalGames;
         statsJson.playerStats[i].avgs.avgOpeningsPerKill = totals.openingsPerKills / totalGames;
         statsJson.playerStats[i].avgs.avgDamagePerOpening = totals.damagePerOpenings / totalGames;
+        statsJson.playerStats[i].avgs.avgKillPercent = totals.killPercentGameAvgs / totalGames;
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
     // console.log(JSON.stringify(statsJson, null, 2));
-    return statsJson;
+    return { totalGames: totalGames,
+             stats: statsJson
+           };
 }
 exports.characterSagaDict = characterSagaDict;
 exports.getStats = getStats;

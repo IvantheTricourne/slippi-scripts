@@ -21,7 +21,7 @@
     },
     "scripts": {
         "build": "elm make gui/Main.elm --output app/index.js --optimize || true",
-        "build:watch": "chokidar '**/*.elm' -c 'yarn run elm'",
+        "build:watch": "chokidar '**/*.elm' -c 'yarn run build'",
         "serve:watch": "nodemon src/server.js",
         "start": "yarn run build & electron app/main.js",
         "watch": "yarn run build & yarn run build:watch & yarn run serve:watch & electron app/main.js true & wait",

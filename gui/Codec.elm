@@ -9,6 +9,8 @@ module Codec exposing
     , playerEncoder
     , playerStatDecoder
     , playerStatEncoder
+    , statsDecoder
+    , statsEncoder
     )
 
 import Json.Decode as D
@@ -20,6 +22,17 @@ import Types exposing (..)
 -- encoders
 
 
+statsEncoder : Stats -> E.Value
+statsEncoder stats =
+    E.object
+        [ ( "games", E.array gameEncoder stats.games )
+        , ( "totalLengthSeconds", E.float stats.totalLengthSeconds )
+        , ( "players", E.array playerEncoder stats.players )
+        , ( "playerStats", E.array playerStatEncoder stats.playerStats )
+        , ( "sagaIcon", E.string stats.sagaIcon )
+        ]
+
+
 gameEncoder : Game -> E.Value
 gameEncoder game =
     E.object
@@ -27,6 +40,7 @@ gameEncoder game =
         , ( "winner", playerEncoder game.winner )
         , ( "stocks", E.int game.stocks )
         , ( "players", E.array playerEncoder game.players )
+        , ( "length", E.string game.length )
         ]
 
 
@@ -57,6 +71,7 @@ playerStatAvgsEncoder playerStatAvgs =
         [ ( "avgApm", E.float playerStatAvgs.avgApm )
         , ( "avgOpeningsPerKill", E.float playerStatAvgs.avgOpeningsPerKill )
         , ( "avgDamagePerOpening", E.float playerStatAvgs.avgDamagePerOpening )
+        , ( "avgKillPercent", E.float playerStatAvgs.avgKillPercent )
         ]
 
 
@@ -85,13 +100,24 @@ favoriteMoveEncoder favMov =
 -- decoders
 
 
+statsDecoder : D.Decoder Stats
+statsDecoder =
+    D.map5 Stats
+        (D.field "games" <| D.array gameDecoder)
+        (D.field "totalLengthSeconds" D.float)
+        (D.field "players" <| D.array playerDecoder)
+        (D.field "playerStats" <| D.array playerStatDecoder)
+        (D.field "sagaIcon" <| D.string)
+
+
 gameDecoder : D.Decoder Game
 gameDecoder =
-    D.map4 Game
+    D.map5 Game
         (D.field "stage" D.string)
         (D.field "winner" playerDecoder)
         (D.field "stocks" D.int)
         (D.field "players" <| D.array playerDecoder)
+        (D.field "length" D.string)
 
 
 characterDecoder : D.Decoder Character
@@ -115,10 +141,11 @@ playerDecoder =
 
 playerStatAvgsDecoder : D.Decoder PlayerStatAvgs
 playerStatAvgsDecoder =
-    D.map3 PlayerStatAvgs
+    D.map4 PlayerStatAvgs
         (D.field "avgApm" D.float)
         (D.field "avgOpeningsPerKill" D.float)
         (D.field "avgDamagePerOpening" D.float)
+        (D.field "avgKillPercent" D.float)
 
 
 playerStatDecoder : D.Decoder PlayerStat

@@ -38,7 +38,7 @@ type Msg
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
-    | Uploaded (Result Http.Error Stats)
+    | Uploaded (Result Http.Error StatsResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,8 +59,19 @@ update msg model =
 
         Uploaded result ->
             case result of
-                Ok stats ->
-                    ( Done stats, Cmd.none )
+                Ok statsResponse ->
+                    if statsResponse.totalGames == 0 then
+                        ( Fail <| D.Failure "No valid games found" statsResponse.stats
+                        , Cmd.none
+                        )
+
+                    else
+                        case D.decodeValue statsDecoder statsResponse.stats of
+                            Ok stats ->
+                                ( Done stats, Cmd.none )
+
+                            Err statsDErr ->
+                                ( Fail statsDErr, Cmd.none )
 
                 Err err ->
                     ( Fail <| httpErrToJsonErr err, Cmd.none )
@@ -77,7 +88,7 @@ update msg model =
                 , url = "http://localhost:8080/stats/upload"
                 , headers = []
                 , body = Http.multipartBody (List.map (Http.filePart "multipleFiles") (file :: files))
-                , expect = Http.expectJson Uploaded statsDecoder
+                , expect = Http.expectJson Uploaded statsResponseDecoder
                 , timeout = Nothing
                 , tracker = Just "upload"
                 }
@@ -88,16 +99,16 @@ httpErrToJsonErr : Http.Error -> D.Error
 httpErrToJsonErr httpErr =
     case httpErr of
         Http.BadUrl str ->
-            D.Failure "BadUrl" (E.object [ ( "msg", E.string str ) ])
+            D.Failure "BadUrl" (E.object [ ( "url", E.string str ) ])
 
         Http.Timeout ->
             D.Failure "Timeout" (E.object [ ( "msg", E.string "response timeout" ) ])
 
         Http.NetworkError ->
-            D.Failure "NetworkError" (E.object [ ( "msg", E.string "network error" ) ])
+            D.Failure "NetworkError" (E.object [ ( "msg", E.string "server connection issue" ) ])
 
         Http.BadStatus int ->
-            D.Failure "Bad Status" (E.object [ ( "msg", E.string "Bad Status" ) ])
+            D.Failure "Bad Status" (E.object [ ( "status-code", E.int int ) ])
 
         Http.BadBody str ->
             D.Failure "Bad Body" (E.string str)
@@ -249,6 +260,7 @@ viewStats stats =
             ]
             []
             [ Single "Total Damage"
+            , Single "Average Kill %"
             , Single "Damage / Opening"
             , Single "Openings / Kill"
             , Single "Neutral Wins"
@@ -406,14 +418,23 @@ getPlayerWinCount playerStats idx =
 
 listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
+    let
+        handlePossibleZero numVal =
+            if numVal == 0 then
+                "n/a"
+
+            else
+                String.fromInt << round <| numVal
+    in
     case mStat of
         Nothing ->
             []
 
         Just stat ->
             [ Single << String.fromInt << round <| stat.totalDamage
+            , Single << handlePossibleZero <| stat.avgs.avgKillPercent
             , Single << String.fromInt << round <| stat.avgs.avgDamagePerOpening
-            , Single << String.fromInt << round <| stat.avgs.avgOpeningsPerKill
+            , Single << handlePossibleZero <| stat.avgs.avgOpeningsPerKill
             , Single << String.fromInt <| stat.neutralWins
             , Single << String.fromInt <| stat.counterHits
             , Single << String.fromInt << round <| stat.avgs.avgApm
@@ -467,6 +488,17 @@ renderStageAndWinnerIcon gameNum gameInfo =
             ++ [ Border.rounded 3
                , scale 1.1
                , padding 1
+               , inFront <|
+                    el
+                        [ Font.extraBold
+                        , Background.color grey
+                        , Border.rounded 3
+                        , alpha 0.65
+                        , centerX
+                        , centerY
+                        , paddingXY 12 17
+                        ]
+                        (text gameInfo.length)
                , above <|
                     el
                         [ centerX
@@ -582,6 +614,10 @@ grey =
     rgb255 25 25 25
 
 
+lighterGrey =
+    rgb255 100 100 100
+
+
 red =
     rgb255 255 0 0
 
@@ -639,25 +675,14 @@ encode model =
             E.object []
 
         Done stats ->
-            E.object
-                [ ( "totalGames", E.int stats.totalGames )
-                , ( "games", E.array gameEncoder stats.games )
-                , ( "totalLengthSeconds", E.float stats.totalLengthSeconds )
-                , ( "players", E.array playerEncoder stats.players )
-                , ( "playerStats", E.array playerStatEncoder stats.playerStats )
-                , ( "sagaIcon", E.string stats.sagaIcon )
-                ]
+            statsEncoder stats
 
 
-statsDecoder : D.Decoder Stats
-statsDecoder =
-    D.map6 Stats
+statsResponseDecoder : D.Decoder StatsResponse
+statsResponseDecoder =
+    D.map2 StatsResponse
         (D.field "totalGames" D.int)
-        (D.field "games" <| D.array gameDecoder)
-        (D.field "totalLengthSeconds" D.float)
-        (D.field "players" <| D.array playerDecoder)
-        (D.field "playerStats" <| D.array playerStatDecoder)
-        (D.field "sagaIcon" <| D.string)
+        (D.field "stats" D.value)
 
 
 defaultPlayer : Player
