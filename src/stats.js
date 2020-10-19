@@ -56,81 +56,81 @@ function getGameWinner(game, player0, player1) {
         characters: [],
         idx: 5
     };
-    if (playerHasMoreStocks(player0Frame, player1Frame)) {
-        // player 0 has more stocks
-        return {
-            winner: player0,
-            stocks: player0Frame.post.stocksRemaining
-        };
-    } else if (playerHasMoreStocks(player1Frame, player0Frame)) {
-        // player 1 has more stocks
-        return {
-            winner: player1,
-            stocks: player1Frame.post.stocksRemaining
-        };
-    } else {
-        // game ended with even stocks
-        if (gameEnd.gameEndMethod === 1) {
-            // Timeout determine percents
-            if (player0Frame.post.percent < player1Frame.post.percent) {
-                // player 0 has less percent
-                return {
-                    winner: player0,
-                    stocks: player0Frame.post.stocksRemaining
-                };
-            } else if (player1Frame.post.percent < player0Frame.post.percent) {
-                // player 1 has less percent
-                return {
-                    winner: player1,
-                    stocks: player1Frame.post.stocksRemaining
-                };
-            } else {
-                // game ended in equal percents
-                // A SUDDEN DEATH!
-                // @TODO: Make this more obvious
-                return {
-                    winner: noOneWins,
-                    stocks: 0
-                };
+    switch (gameEnd.gameEndMethod) {
+    case 1:
+        // Timeout determine percents
+        if (player0Frame.post.percent < player1Frame.post.percent) {
+            // player 0 has less percent
+            return {
+                winner: player0,
+                stocks: player0Frame.post.stocksRemaining
             };
-        } else if (gameEnd.gameEndMethod === 2) {
-            // normal game end, but both died at the same time
+        } else if (player1Frame.post.percent < player0Frame.post.percent) {
+            // player 1 has less percent
+            return {
+                winner: player1,
+                stocks: player1Frame.post.stocksRemaining
+            };
+        } else {
+            // game ended in equal percents
             // A SUDDEN DEATH!
             // @TODO: Make this more obvious
             return {
                 winner: noOneWins,
                 stocks: 0
             };
-        } else if (gameEnd.gameEndMethod === 7) {
-            // No contest, more than likely someone LRAStarted
-            // the lrasInitiatorIndex determines who lost
-            if (gameEnd.lrasInitiatorIndex === 0) {
-                // player 0 quit
-                return {
-                    winner: player1,
-                    stocks: player1Frame.post.stocksRemaining
-                };
-            } else if (gameEnd.lrasInitiatorIndex === 1) {
-                // player 1 quit
-                return {
-                    winner: player0,
-                    stocks: player0Frame.post.stocksRemaining
-                };
-            } else {
-                // something unknown happened
-                return {
-                    winner: noOneWins,
-                    stocks: 0
-                };
-            }
+        }
+    case 2:
+        // a normal game end: GAME!
+        if (playerHasMoreStocks(player0Frame, player1Frame)) {
+            // player 0 has more stocks
+            return {
+                winner: player0,
+                stocks: player0Frame.post.stocksRemaining
+            };
+        } else if (playerHasMoreStocks(player1Frame, player0Frame)) {
+            // player 1 has more stocks
+            return {
+                winner: player1,
+                stocks: player1Frame.post.stocksRemaining
+            };
         } else {
+            // both died at the same time
+            // A SUDDEN DEATH!
+            // @TODO: Make this more obvious
+            return {
+                winner: noOneWins,
+                stocks: 0
+            };
+        }
+    case 7:
+        // someone quit out
+        if (gameEnd.lrasInitiatorIndex === 0) {
+            // player 0 quit
+            return {
+                winner: player1,
+                stocks: player1Frame.post.stocksRemaining
+            };
+        } else if (gameEnd.lrasInitiatorIndex === 1) {
+            // player 1 quit
+            return {
+                winner: player0,
+                stocks: player0Frame.post.stocksRemaining
+            };
+        } else {
+            // something unknown happened
             return {
                 winner: noOneWins,
                 stocks: 0
             };
         }
     }
+    return {
+        winner: noOneWins,
+        stocks: 0
+    };
 }
+
 // get most used move
 function getMostUsedMove(arr) {
     var mf = 1;
