@@ -289,14 +289,16 @@ function getStats(files, players = []) {
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
             "moves": [],
-            "killMoves": []
+            "killMoves": [],
+            "avgKillPercent": 0
         },
         {
             "apms": 0,
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
             "moves": [],
-            "killMoves": []
+            "killMoves": [],
+            "avgKillPercent": 0
         }
     ];
     _.each(files, (file, i) => {
@@ -354,6 +356,9 @@ function getStats(files, players = []) {
             // track char info
             player0Chars.push(player0.character);
             player1Chars.push(player1.character);
+            // update kill percent sums
+            let player0GameKillPercentSum = 0;
+            let player1GameKillPercentSum = 0;
             // get moves from conversions and combos
             _.each(stats.combos.concat(stats.conversions), (combo, i) => {
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
@@ -361,11 +366,13 @@ function getStats(files, players = []) {
                     .moves
                     .concat(namedMoves);
                 if (combo.didKill) {
+                    console.log(JSON.stringify(combo, null, 2));
                     let killingMove = namedMoves[namedMoves.length - 1];
                     playerTotals[combo.playerIndex].killMoves.push(killingMove);
                 }
             });
             // update stats
+            // console.log(JSON.stringify(stats.overall, null, 2));
             _.each(stats.overall, (playerStats, i) => {
                 // sum things
                 statsJson.playerStats[i].totalDamage += playerStats.totalDamage;
@@ -443,7 +450,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });
-    console.log(JSON.stringify(statsJson, null, 2));
+    // console.log(JSON.stringify(statsJson, null, 2));
     return { totalGames: totalGames,
              stats: statsJson
            };
