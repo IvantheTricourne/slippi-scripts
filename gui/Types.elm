@@ -59,6 +59,7 @@ type alias PlayerStatAvgs =
     { avgApm : Float
     , avgOpeningsPerKill : Float
     , avgDamagePerOpening : Float
+    , avgKillPercent : Float
     }
 
 

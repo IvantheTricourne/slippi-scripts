@@ -71,6 +71,7 @@ playerStatAvgsEncoder playerStatAvgs =
         [ ( "avgApm", E.float playerStatAvgs.avgApm )
         , ( "avgOpeningsPerKill", E.float playerStatAvgs.avgOpeningsPerKill )
         , ( "avgDamagePerOpening", E.float playerStatAvgs.avgDamagePerOpening )
+        , ( "avgKillPercent", E.float playerStatAvgs.avgKillPercent )
         ]
 
 
@@ -140,10 +141,11 @@ playerDecoder =
 
 playerStatAvgsDecoder : D.Decoder PlayerStatAvgs
 playerStatAvgsDecoder =
-    D.map3 PlayerStatAvgs
+    D.map4 PlayerStatAvgs
         (D.field "avgApm" D.float)
         (D.field "avgOpeningsPerKill" D.float)
         (D.field "avgDamagePerOpening" D.float)
+        (D.field "avgKillPercent" D.float)
 
 
 playerStatDecoder : D.Decoder PlayerStat

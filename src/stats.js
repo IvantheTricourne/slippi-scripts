@@ -290,7 +290,7 @@ function getStats(files, players = []) {
             "damagePerOpenings": 0,
             "moves": [],
             "killMoves": [],
-            "avgKillPercent": 0
+            "killPercentGameAvgs": 0
         },
         {
             "apms": 0,
@@ -298,7 +298,7 @@ function getStats(files, players = []) {
             "damagePerOpenings": 0,
             "moves": [],
             "killMoves": [],
-            "avgKillPercent": 0
+            "killPercentGameAvgs": 0
         }
     ];
     _.each(files, (file, i) => {
@@ -357,16 +357,24 @@ function getStats(files, players = []) {
             player0Chars.push(player0.character);
             player1Chars.push(player1.character);
             // update kill percent sums
-            let player0GameKillPercentSum = 0;
-            let player1GameKillPercentSum = 0;
+            let playerGameKillPercentSums = [0, 0];
+            // console.log(JSON.stringify(game.stockComputer.stocks, null, 2));
+            _.each(game.stockComputer.stocks, (stock, i) => {
+                if (stock.deathAnimation !== null) {
+                    // console.log(JSON.stringify(stock, null, 2));
+                    // console.log(`${stock.opponentIndex} kills ${stock.playerIndex} @ ${stock.endPercent}`);
+                    playerGameKillPercentSums[stock.opponentIndex] += stock.endPercent;
+                }
+            });
+            // console.log(playerGameKillPercentSums);
             // get moves from conversions and combos
-            _.each(stats.combos.concat(stats.conversions), (combo, i) => {
+            _.each(stats.combos, (combo, i) => {
+            // _.each(stats.combos.concat(stats.conversions), (combo, i) => {
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
                 playerTotals[combo.playerIndex].moves = playerTotals[combo.playerIndex]
                     .moves
                     .concat(namedMoves);
                 if (combo.didKill) {
-                    console.log(JSON.stringify(combo, null, 2));
                     let killingMove = namedMoves[namedMoves.length - 1];
                     playerTotals[combo.playerIndex].killMoves.push(killingMove);
                 }
@@ -383,6 +391,9 @@ function getStats(files, players = []) {
                 playerTotals[i].apms += playerStats.inputsPerMinute.ratio;
                 playerTotals[i].openingsPerKills += playerStats.openingsPerKill.ratio;
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
+                if (playerStats.killCount !== 0) {
+                    playerTotals[i].killPercentGameAvgs += playerGameKillPercentSums[i] / playerStats.killCount;
+                }
             });
             // update win counts
             let {
@@ -447,6 +458,7 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].avgs.avgApm = totals.apms / totalGames;
         statsJson.playerStats[i].avgs.avgOpeningsPerKill = totals.openingsPerKills / totalGames;
         statsJson.playerStats[i].avgs.avgDamagePerOpening = totals.damagePerOpenings / totalGames;
+        statsJson.playerStats[i].avgs.avgKillPercent = totals.killPercentGameAvgs / totalGames;
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });

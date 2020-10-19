@@ -260,6 +260,7 @@ viewStats stats =
             ]
             []
             [ Single "Total Damage"
+            , Single "Average Kill %"
             , Single "Damage / Opening"
             , Single "Openings / Kill"
             , Single "Neutral Wins"
@@ -417,14 +418,23 @@ getPlayerWinCount playerStats idx =
 
 listifyPlayerStat : Maybe PlayerStat -> List CellValue
 listifyPlayerStat mStat =
+    let
+        handlePossibleZero numVal =
+            if numVal == 0 then
+                "n/a"
+
+            else
+                String.fromInt << round <| numVal
+    in
     case mStat of
         Nothing ->
             []
 
         Just stat ->
             [ Single << String.fromInt << round <| stat.totalDamage
+            , Single << handlePossibleZero <| stat.avgs.avgKillPercent
             , Single << String.fromInt << round <| stat.avgs.avgDamagePerOpening
-            , Single << String.fromInt << round <| stat.avgs.avgOpeningsPerKill
+            , Single << handlePossibleZero <| stat.avgs.avgOpeningsPerKill
             , Single << String.fromInt <| stat.neutralWins
             , Single << String.fromInt <| stat.counterHits
             , Single << String.fromInt << round <| stat.avgs.avgApm
@@ -481,11 +491,12 @@ renderStageAndWinnerIcon gameNum gameInfo =
                , inFront <|
                     el
                         [ Font.extraBold
-                        , Background.color lighterGrey
-                        , alpha 0.5
-                        , alpha 1
+                        , Background.color grey
+                        , Border.rounded 3
+                        , alpha 0.65
                         , centerX
-                        , scale 0.75
+                        , centerY
+                        , paddingXY 12 17
                         ]
                         (text gameInfo.length)
                , above <|
