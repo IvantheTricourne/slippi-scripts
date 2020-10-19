@@ -1,7 +1,26 @@
-name: release
+name: build
 on: push
 jobs:
-  build:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        
+      - name: Install project deps
+        run: yarn install
+        
+      - name: Run project tests
+        run: yarn run test
+  release:
     runs-on: ${{ matrix.os }}
 
     strategy:
