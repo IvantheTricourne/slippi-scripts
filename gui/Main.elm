@@ -36,6 +36,7 @@ type StatsStatus
 type alias Model =
     { modelState : StatsStatus
     , modelConfig : StatsConfig
+    , disabledStats : Int
     }
 
 
@@ -98,7 +99,15 @@ update msg model =
             )
 
         Toggle field bool ->
-            ( { model | modelConfig = toggleField field bool model.modelConfig }
+            ( { model
+                | modelConfig = toggleField field bool model.modelConfig
+                , disabledStats =
+                    if bool then
+                        model.disabledStats - 1
+
+                    else
+                        model.disabledStats + 1
+              }
             , Cmd.none
             )
 
@@ -216,11 +225,11 @@ view model =
                     viewProgress pct
 
                 Done stats ->
-                    viewStats stats model.modelConfig
+                    viewStats stats model.modelConfig model.disabledStats
             )
 
 
-viewStats stats modelCfg =
+viewStats stats modelCfg disabledStats =
     let
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
@@ -242,7 +251,7 @@ viewStats stats modelCfg =
             ]
         , padding 2
         , Border.rounded 5
-        , Events.onClick Configure
+        , Events.onClick Reset
         , scale 1.25
         , moveDown 10
         , onLeft <|
@@ -273,6 +282,7 @@ viewStats stats modelCfg =
         (winnerSagaIcon stats.sagaIcon)
     , row
         [ centerX
+        , centerY
         , spacing 10
         , padding 10
         ]
@@ -286,7 +296,7 @@ viewStats stats modelCfg =
                     , scale 1.5
                     , useWinnerBackgroundGradient player0Wins player1Wins
                     , Border.rounded 5
-                    , moveRight 25
+                    , moveRight 55
                     , moveDown 5
                     , padding 1
                     , above <|
@@ -323,10 +333,11 @@ viewStats stats modelCfg =
             , Font.bold
             , Font.italic
             , spacing 15
+            , Events.onDoubleClick Configure
             ]
             []
             [ Single .totalDamage "Total Damage"
-            , Single .avgKillPercent "Average Kill %"
+            , Single .avgKillPercent "Average Kill Percent"
             , Single .avgDamagePerOpening "Damage / Opening"
             , Single .avgOpeningsPerKill "Openings / Kill"
             , Single .neutralWins "Neutral Wins"
@@ -345,7 +356,7 @@ viewStats stats modelCfg =
                     , scale 1.5
                     , useWinnerBackgroundGradient player1Wins player0Wins
                     , Border.rounded 5
-                    , moveLeft 25
+                    , moveLeft 55
                     , moveDown 5
                     , padding 1
                     , above <|
@@ -377,7 +388,7 @@ viewStats stats modelCfg =
             ]
             (listifyPlayerStat <| Array.get 1 stats.playerStats)
         ]
-    , renderStageImgsWithWinner (Array.toList stats.games)
+    , renderStageImgsWithWinner (Array.toList stats.games) disabledStats
     ]
 
 
@@ -549,7 +560,7 @@ viewConfiguration modelCfg =
                     , checked = modelCfg.avgKillPercent
                     , label =
                         Input.labelRight []
-                            (text "Average Kill %")
+                            (text "Average Kill Percent")
                     }
                 , Input.checkbox []
                     { onChange = Toggle AvgApmF
@@ -652,14 +663,14 @@ useWinnerBackgroundGradient playerWins opponentWins =
             }
 
 
-renderStageImgsWithWinner games =
+renderStageImgsWithWinner games disabledStats =
     wrappedRow
         [ Background.color black
         , Border.rounded 5
         , spacing 15
         , padding 10
         , centerX
-        , moveDown 25
+        , moveDown <| 25 + (toFloat disabledStats * 25)
         ]
     <|
         List.indexedMap renderStageAndWinnerIcon games
@@ -744,7 +755,7 @@ renderStatColumn statsConfig styles subStyles cellVals =
         { data = toggledCellVals
         , columns =
             [ { header = text ""
-              , width = px 175
+              , width = px 200
               , view =
                     \_ x ->
                         case x of
@@ -848,6 +859,7 @@ encode model =
                         ]
           )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
+        , ( "disabledStats", E.int model.disabledStats )
         ]
 
 
@@ -866,7 +878,7 @@ decodePreModelState =
 
 decode : D.Decoder Model
 decode =
-    D.map2 Model
+    D.map3 Model
         (D.field "modelState"
             (decodePreModelState
                 |> D.andThen
@@ -888,6 +900,7 @@ decode =
             )
         )
         (D.field "modelConfig" statsConfigDecoder)
+        (D.field "disabledStats" D.int)
 
 
 defaultPlayer : Player
@@ -938,6 +951,7 @@ init flags =
         Err _ ->
             { modelState = Waiting
             , modelConfig = defaultStatsConfig
+            , disabledStats = 0
             }
 
         Ok model ->
