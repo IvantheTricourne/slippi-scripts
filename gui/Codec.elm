@@ -31,7 +31,7 @@ statsAvgsConfigEncoder statsAvgsCfg =
     E.object
         [ ( "avgApm", E.bool statsAvgsCfg.avgApm )
         , ( "avgOpeningsPerKill", E.bool statsAvgsCfg.avgOpeningsPerKill )
-        , ( "avgDamagerPerOpening", E.bool statsAvgsCfg.avgDamagePerOpening )
+        , ( "avgDamagePerOpening", E.bool statsAvgsCfg.avgDamagePerOpening )
         , ( "avgKillPercent", E.bool statsAvgsCfg.avgKillPercent )
         ]
 
