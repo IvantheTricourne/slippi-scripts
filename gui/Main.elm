@@ -22,11 +22,18 @@ import Types exposing (..)
 -- model
 
 
-type Model
+type StatsStatus
     = Waiting
+    | Configuring
     | Uploading Float
     | Done Stats
     | Fail D.Error
+
+
+type alias Model =
+    { modelState : StatsStatus
+    , modelConfig : StatsConfig
+    }
 
 
 
@@ -35,6 +42,7 @@ type Model
 
 type Msg
     = Reset
+    | Configure
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
@@ -45,14 +53,21 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            ( Waiting
+            ( { model | modelState = Waiting }
+            , Cmd.none
+            )
+
+        Configure ->
+            ( { model | modelState = Configuring }
             , Cmd.none
             )
 
         GotProgress progress ->
             case progress of
                 Http.Sending p ->
-                    ( Uploading (Http.fractionSent p), Cmd.none )
+                    ( { model | modelState = Uploading (Http.fractionSent p) }
+                    , Cmd.none
+                    )
 
                 Http.Receiving _ ->
                     ( model, Cmd.none )
@@ -61,23 +76,33 @@ update msg model =
             case result of
                 Ok statsResponse ->
                     if statsResponse.totalGames == 0 then
-                        ( Fail <| D.Failure "No valid games found" statsResponse.stats
+                        ( { model
+                            | modelState =
+                                Fail <|
+                                    D.Failure "No valid games found" statsResponse.stats
+                          }
                         , Cmd.none
                         )
 
                     else
                         case D.decodeValue statsDecoder statsResponse.stats of
                             Ok stats ->
-                                ( Done stats, Cmd.none )
+                                ( { model | modelState = Done stats }, Cmd.none )
 
                             Err statsDErr ->
-                                ( Fail statsDErr, Cmd.none )
+                                ( { model | modelState = Fail statsDErr }, Cmd.none )
 
                 Err err ->
-                    ( Fail <| httpErrToJsonErr err, Cmd.none )
+                    ( { model
+                        | modelState =
+                            Fail <|
+                                httpErrToJsonErr err
+                      }
+                    , Cmd.none
+                    )
 
         FilesRequested ->
-            ( Uploading 0
+            ( { model | modelState = Uploading 0 }
             , Select.files [ "*" ] FilesSelected
             )
 
@@ -137,8 +162,11 @@ view model =
             , centerY
             , spacing 10
             ]
-            (case model of
+            (case model.modelState of
                 Waiting ->
+                    viewInit
+
+                Configuring ->
                     viewInit
 
                 Fail err ->
@@ -316,24 +344,46 @@ viewStats stats =
 
 
 viewInit =
-    [ image
-        [ centerX
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick FilesRequested
-        , below <|
-            el
-                [ Font.color white
-                , centerX
-                ]
-                (text "Slippi Files")
+    [ row
+        [ spacing 100
         ]
-        { src = "rsrc/Characters/Saga Icons/Smash.png"
-        , description = "Smash Logo Button"
-        }
+        [ image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Slippi Files")
+            ]
+            { src = "rsrc/Characters/Saga Icons/Smash.png"
+            , description = "Smash Logo Button"
+            }
+        , image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick Configure
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Configure")
+            ]
+            { src = "rsrc/Characters/Saga Icons/Smash.png"
+            , description = "Smash Logo Button"
+            }
+        ]
     ]
 
 
@@ -342,24 +392,44 @@ viewFail err =
         msg =
             D.errorToString err
     in
-    [ image
-        [ centerX
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick FilesRequested
-        , below <|
-            el
-                [ Font.color white
-                , centerX
+    [ row [ spacing 100 ]
+        [ image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
                 ]
-                (text "Slippi Files")
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Slippi Files")
+            ]
+            { src = "rsrc/Characters/Saga Icons/Smash.png"
+            , description = "Smash Logo Button"
+            }
+        , image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick Configure
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Configure")
+            ]
+            { src = "rsrc/Characters/Saga Icons/Smash.png"
+            , description = "Smash Logo Button"
+            }
         ]
-        { src = "rsrc/Characters/Saga Icons/Smash.png"
-        , description = "Smash Logo Button"
-        }
 
     -- @TODO: format this better somehow
     , el
@@ -664,18 +734,33 @@ updateWithStorage msg oldModel =
 
 encode : Model -> E.Value
 encode model =
-    case model of
-        Waiting ->
-            E.object []
+    E.object
+        [ ( "modelState"
+          , case model.modelState of
+                Waiting ->
+                    E.object []
 
-        Uploading _ ->
-            E.object []
+                Configuring ->
+                    E.object []
 
-        Fail _ ->
-            E.object []
+                Uploading _ ->
+                    E.object []
 
-        Done stats ->
-            statsEncoder stats
+                Fail _ ->
+                    E.object []
+
+                Done stats ->
+                    statsEncoder stats
+          )
+        , ( "modelConfig", statsConfigEncoder model.modelConfig )
+        ]
+
+
+decode : D.Decoder Model
+decode =
+    D.map2 Model
+        (D.field "modelState" (statsDecoder |> D.andThen (Done >> D.succeed)))
+        (D.field "modelConfig" statsConfigDecoder)
 
 
 statsResponseDecoder : D.Decoder StatsResponse
@@ -715,12 +800,26 @@ subscriptions model =
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue statsDecoder flags of
+    ( case D.decodeValue decode flags of
         Err _ ->
-            Waiting
+            { modelState = Waiting
+            , modelConfig =
+                { totalDamage = True
+                , neutralWins = True
+                , counterHits = True
+                , avgs =
+                    { avgApm = True
+                    , avgOpeningsPerKill = True
+                    , avgDamagePerOpening = True
+                    , avgKillPercent = True
+                    }
+                , favoriteMove = True
+                , favoriteKillMove = True
+                }
+            }
 
-        Ok stats ->
-            Done stats
+        Ok model ->
+            model
     , Cmd.none
     )
 

@@ -9,6 +9,10 @@ module Codec exposing
     , playerEncoder
     , playerStatDecoder
     , playerStatEncoder
+    , statsAvgsConfigDecoder
+    , statsAvgsConfigEncoder
+    , statsConfigDecoder
+    , statsConfigEncoder
     , statsDecoder
     , statsEncoder
     )
@@ -20,6 +24,28 @@ import Types exposing (..)
 
 
 -- encoders
+
+
+statsAvgsConfigEncoder : StatsAvgsConfig -> E.Value
+statsAvgsConfigEncoder statsAvgsCfg =
+    E.object
+        [ ( "avgApm", E.bool statsAvgsCfg.avgApm )
+        , ( "avgOpeningsPerKill", E.bool statsAvgsCfg.avgOpeningsPerKill )
+        , ( "avgDamagerPerOpening", E.bool statsAvgsCfg.avgDamagePerOpening )
+        , ( "avgKillPercent", E.bool statsAvgsCfg.avgKillPercent )
+        ]
+
+
+statsConfigEncoder : StatsConfig -> E.Value
+statsConfigEncoder statsCfg =
+    E.object
+        [ ( "totalDamage", E.bool statsCfg.totalDamage )
+        , ( "neutralWins", E.bool statsCfg.neutralWins )
+        , ( "counterHits", E.bool statsCfg.counterHits )
+        , ( "avgs", statsAvgsConfigEncoder statsCfg.avgs )
+        , ( "favoriteMove", E.bool statsCfg.favoriteMove )
+        , ( "favoriteKillMove", E.bool statsCfg.favoriteKillMove )
+        ]
 
 
 statsEncoder : Stats -> E.Value
@@ -98,6 +124,26 @@ favoriteMoveEncoder favMov =
 
 
 -- decoders
+
+
+statsAvgsConfigDecoder : D.Decoder StatsAvgsConfig
+statsAvgsConfigDecoder =
+    D.map4 StatsAvgsConfig
+        (D.field "avgApm" D.bool)
+        (D.field "avgOpeningsPerKill" D.bool)
+        (D.field "avgDamagePerOpening" D.bool)
+        (D.field "avgKillPercent" D.bool)
+
+
+statsConfigDecoder : D.Decoder StatsConfig
+statsConfigDecoder =
+    D.map6 StatsConfig
+        (D.field "totalDamage" D.bool)
+        (D.field "neutralWins" D.bool)
+        (D.field "counterHits" D.bool)
+        (D.field "avgs" statsAvgsConfigDecoder)
+        (D.field "favoriteMove" D.bool)
+        (D.field "favoriteKillMove" D.bool)
 
 
 statsDecoder : D.Decoder Stats
