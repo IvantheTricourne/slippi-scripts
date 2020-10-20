@@ -107,5 +107,5 @@ type alias FavoriteMove =
 
 
 type CellValue
-    = Single String
-    | Dub ( String, String )
+    = Single (StatsConfig -> Bool) String
+    | Dub (StatsConfig -> Bool) String String

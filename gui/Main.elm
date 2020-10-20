@@ -216,11 +216,11 @@ view model =
                     viewProgress pct
 
                 Done stats ->
-                    viewStats stats
+                    viewStats stats model.modelConfig
             )
 
 
-viewStats stats =
+viewStats stats modelCfg =
     let
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
@@ -242,7 +242,7 @@ viewStats stats =
             ]
         , padding 2
         , Border.rounded 5
-        , Events.onClick Reset
+        , Events.onClick Configure
         , scale 1.25
         , moveDown 10
         , onLeft <|
@@ -276,7 +276,7 @@ viewStats stats =
         , spacing 10
         , padding 10
         ]
-        [ renderStatColumn
+        [ renderStatColumn modelCfg
             [ Font.color white
             , Font.alignRight
             , onLeft <|
@@ -317,7 +317,7 @@ viewStats stats =
             , moveUp 4
             ]
             (listifyPlayerStat <| Array.get 0 stats.playerStats)
-        , renderStatColumn
+        , renderStatColumn modelCfg
             [ Font.color white
             , Font.center
             , Font.bold
@@ -325,17 +325,17 @@ viewStats stats =
             , spacing 15
             ]
             []
-            [ Single "Total Damage"
-            , Single "Average Kill %"
-            , Single "Damage / Opening"
-            , Single "Openings / Kill"
-            , Single "Neutral Wins"
-            , Single "Counter Hits"
-            , Single "APM"
-            , Single "Favorite Move"
-            , Single "Favorite Kill Move"
+            [ Single .totalDamage "Total Damage"
+            , Single .avgKillPercent "Average Kill %"
+            , Single .avgDamagePerOpening "Damage / Opening"
+            , Single .avgOpeningsPerKill "Openings / Kill"
+            , Single .neutralWins "Neutral Wins"
+            , Single .counterHits "Counter Hits"
+            , Single .avgApm "APM"
+            , Single .favoriteMove "Favorite Move"
+            , Single .favoriteKillMove "Favorite Kill Move"
             ]
-        , renderStatColumn
+        , renderStatColumn modelCfg
             [ Font.color white
             , Font.alignLeft
             , onRight <|
@@ -626,15 +626,15 @@ listifyPlayerStat mStat =
             []
 
         Just stat ->
-            [ Single << String.fromInt << round <| stat.totalDamage
-            , Single << handlePossibleZero <| stat.avgKillPercent
-            , Single << String.fromInt << round <| stat.avgDamagePerOpening
-            , Single << handlePossibleZero <| stat.avgOpeningsPerKill
-            , Single << String.fromInt <| stat.neutralWins
-            , Single << String.fromInt <| stat.counterHits
-            , Single << String.fromInt << round <| stat.avgApm
-            , Dub ( stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed )
-            , Dub ( stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed )
+            [ Single .totalDamage << String.fromInt << round <| stat.totalDamage
+            , Single .avgKillPercent << handlePossibleZero <| stat.avgKillPercent
+            , Single .avgDamagePerOpening << String.fromInt << round <| stat.avgDamagePerOpening
+            , Single .avgOpeningsPerKill << handlePossibleZero <| stat.avgOpeningsPerKill
+            , Single .neutralWins << String.fromInt <| stat.neutralWins
+            , Single .counterHits << String.fromInt <| stat.counterHits
+            , Single .avgApm << String.fromInt << round <| stat.avgApm
+            , Dub .favoriteMove stat.favoriteMove.moveName (String.fromInt stat.favoriteMove.timesUsed)
+            , Dub .favoriteKillMove stat.favoriteKillMove.moveName (String.fromInt stat.favoriteKillMove.timesUsed)
             ]
 
 
@@ -718,19 +718,40 @@ renderStageAndWinnerIcon gameNum gameInfo =
         }
 
 
-renderStatColumn styles subStyles strings =
+renderStatColumn statsConfig styles subStyles cellVals =
+    let
+        toggledCellVals =
+            List.concatMap
+                (\cellVal ->
+                    case cellVal of
+                        Single f _ ->
+                            if f statsConfig then
+                                [ cellVal ]
+
+                            else
+                                []
+
+                        Dub f _ _ ->
+                            if f statsConfig then
+                                [ cellVal ]
+
+                            else
+                                []
+                )
+                cellVals
+    in
     Element.indexedTable styles
-        { data = strings
+        { data = toggledCellVals
         , columns =
             [ { header = text ""
               , width = px 175
               , view =
                     \_ x ->
                         case x of
-                            Single l ->
+                            Single _ l ->
                                 el [] <| text l
 
-                            Dub ( l, sub ) ->
+                            Dub _ l sub ->
                                 el
                                     [ below <|
                                         el subStyles
