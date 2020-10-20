@@ -789,7 +789,7 @@ updateWithStorage msg oldModel =
 
 
 
--- codecs
+-- model codecs
 
 
 encode : Model -> E.Value
@@ -864,13 +864,6 @@ decode =
         (D.field "modelConfig" statsConfigDecoder)
 
 
-statsResponseDecoder : D.Decoder StatsResponse
-statsResponseDecoder =
-    D.map2 StatsResponse
-        (D.field "totalGames" D.int)
-        (D.field "stats" D.value)
-
-
 defaultPlayer : Player
 defaultPlayer =
     { playerPort = 0
@@ -883,6 +876,20 @@ defaultPlayer =
         }
     , characters = Array.fromList []
     , idx = 5
+    }
+
+
+defaultStatsConfig : StatsConfig
+defaultStatsConfig =
+    { totalDamage = True
+    , neutralWins = True
+    , counterHits = True
+    , avgApm = True
+    , avgOpeningsPerKill = True
+    , avgDamagePerOpening = True
+    , avgKillPercent = True
+    , favoriteMove = True
+    , favoriteKillMove = True
     }
 
 
@@ -904,19 +911,7 @@ init flags =
     ( case D.decodeValue decode flags of
         Err _ ->
             { modelState = Waiting
-            , modelConfig =
-                { totalDamage = True
-                , neutralWins = True
-                , counterHits = True
-                , avgs =
-                    { avgApm = True
-                    , avgOpeningsPerKill = True
-                    , avgDamagePerOpening = True
-                    , avgKillPercent = True
-                    }
-                , favoriteMove = True
-                , favoriteKillMove = True
-                }
+            , modelConfig = defaultStatsConfig
             }
 
         Ok model ->

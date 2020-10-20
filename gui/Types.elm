@@ -6,7 +6,6 @@ module Types exposing
     , Player
     , PlayerStat
     , Stats
-    , StatsAvgsConfig
     , StatsConfig
     , StatsResponse
     )
@@ -15,19 +14,14 @@ import Array exposing (Array)
 import Json.Decode exposing (Value)
 
 
-type alias StatsAvgsConfig =
-    { avgApm : Bool
-    , avgOpeningsPerKill : Bool
-    , avgDamagePerOpening : Bool
-    , avgKillPercent : Bool
-    }
-
-
 type alias StatsConfig =
     { totalDamage : Bool
     , neutralWins : Bool
     , counterHits : Bool
-    , avgs : StatsAvgsConfig
+    , avgApm : Bool
+    , avgOpeningsPerKill : Bool
+    , avgDamagePerOpening : Bool
+    , avgKillPercent : Bool
     , favoriteMove : Bool
     , favoriteKillMove : Bool
     }
