@@ -7,11 +7,24 @@ module Types exposing
     , PlayerStat
     , Stats
     , StatsConfig
+    , StatsConfigField(..)
     , StatsResponse
     )
 
 import Array exposing (Array)
 import Json.Decode exposing (Value)
+
+
+type StatsConfigField
+    = TotalDamageF
+    | NeutralWinsF
+    | CounterHitsF
+    | AvgApmF
+    | AvgOpeningsPerKillF
+    | AvgDamagePerOpeningF
+    | AvgKillPercentF
+    | FavoriteMoveF
+    | FavoriteKillMoveF
 
 
 type alias StatsConfig =

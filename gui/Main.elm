@@ -46,12 +46,42 @@ type alias Model =
 type Msg
     = Reset
     | Configure
-    | ToggleTotalDamage Bool
-    | ToggleFavoriteKillMove Bool
+    | Toggle StatsConfigField Bool
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
     | Uploaded (Result Http.Error StatsResponse)
+
+
+toggleField : StatsConfigField -> Bool -> StatsConfig -> StatsConfig
+toggleField field val statsCfg =
+    case field of
+        TotalDamageF ->
+            { statsCfg | totalDamage = val }
+
+        NeutralWinsF ->
+            { statsCfg | neutralWins = val }
+
+        CounterHitsF ->
+            { statsCfg | counterHits = val }
+
+        AvgApmF ->
+            { statsCfg | avgApm = val }
+
+        AvgOpeningsPerKillF ->
+            { statsCfg | avgOpeningsPerKill = val }
+
+        AvgDamagePerOpeningF ->
+            { statsCfg | avgDamagePerOpening = val }
+
+        AvgKillPercentF ->
+            { statsCfg | avgKillPercent = val }
+
+        FavoriteMoveF ->
+            { statsCfg | favoriteMove = val }
+
+        FavoriteKillMoveF ->
+            { statsCfg | favoriteKillMove = val }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -67,21 +97,8 @@ update msg model =
             , Cmd.none
             )
 
-        ToggleTotalDamage val ->
-            let
-                newCfg cfg =
-                    { cfg | totalDamage = val }
-            in
-            ( { model | modelConfig = newCfg model.modelConfig }
-            , Cmd.none
-            )
-
-        ToggleFavoriteKillMove val ->
-            let
-                newCfg cfg =
-                    { cfg | favoriteKillMove = val }
-            in
-            ( { model | modelConfig = newCfg model.modelConfig }
+        Toggle field bool ->
+            ( { model | modelConfig = toggleField field bool model.modelConfig }
             , Cmd.none
             )
 
@@ -464,25 +481,83 @@ viewConfiguration modelCfg =
             , centerX
             ]
             (text "Configure Stats")
-        , row [ spacing 100 ]
-            [ column []
+        , row
+            [ spacing 100
+            ]
+            [ column [ spacing 10 ]
                 [ Input.checkbox []
-                    { onChange = ToggleTotalDamage
+                    { onChange = Toggle TotalDamageF
                     , icon = Input.defaultCheckbox
                     , checked = modelCfg.totalDamage
                     , label =
                         Input.labelRight []
                             (text "Total Damage")
                     }
-                ]
-            , column []
-                [ Input.checkbox []
-                    { onChange = ToggleFavoriteKillMove
+                , Input.checkbox []
+                    { onChange = Toggle NeutralWinsF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.neutralWins
+                    , label =
+                        Input.labelRight []
+                            (text "Neutral Wins")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle CounterHitsF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.counterHits
+                    , label =
+                        Input.labelRight []
+                            (text "Counter Hits")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle FavoriteMoveF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.favoriteMove
+                    , label =
+                        Input.labelRight []
+                            (text "Favorite Move")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle FavoriteKillMoveF
                     , icon = Input.defaultCheckbox
                     , checked = modelCfg.favoriteKillMove
                     , label =
                         Input.labelRight []
                             (text "Favorite Kill Move")
+                    }
+                ]
+            , column [ spacing 15 ]
+                [ Input.checkbox []
+                    { onChange = Toggle AvgOpeningsPerKillF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgOpeningsPerKill
+                    , label =
+                        Input.labelRight []
+                            (text "Openings / Kill")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgDamagePerOpeningF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgDamagePerOpening
+                    , label =
+                        Input.labelRight []
+                            (text "Damage / Opening")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgKillPercentF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgKillPercent
+                    , label =
+                        Input.labelRight []
+                            (text "Average Kill %")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgApmF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgApm
+                    , label =
+                        Input.labelRight []
+                            (text "APM")
                     }
                 ]
             ]
