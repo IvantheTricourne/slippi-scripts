@@ -3,6 +3,7 @@ port module Main exposing (..)
 import Array
 import Browser
 import Codec exposing (..)
+import Colors exposing (..)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -16,6 +17,7 @@ import Http as Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe
+import Resources exposing (..)
 import Types exposing (..)
 
 
@@ -251,9 +253,7 @@ viewStats stats =
                     ]
             )
         ]
-        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ "G.png"
-        , description = "Logo for set winner"
-        }
+        (winnerSagaIcon stats.sagaIcon)
     , row
         [ centerX
         , spacing 10
@@ -383,9 +383,7 @@ viewInit =
                     ]
                     (text "Slippi Files")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
         , image
             [ Element.mouseOver
                 [ Background.color cyan
@@ -400,9 +398,7 @@ viewInit =
                     ]
                     (text "Configure")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
         ]
     ]
 
@@ -430,9 +426,7 @@ viewFail err =
                     ]
                     (text "Slippi Files")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
         , image
             [ Element.mouseOver
                 [ Background.color cyan
@@ -447,9 +441,7 @@ viewFail err =
                     ]
                     (text "Configure")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
         ]
 
     -- @TODO: format this better somehow
@@ -506,9 +498,7 @@ viewConfiguration modelCfg =
                 el [ centerX ]
                     (text "Slippi Files")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
         ]
     ]
 
@@ -702,66 +692,6 @@ renderSecondaries styles player =
                     }
             )
             (List.reverse << Array.toList <| player.characters)
-
-
-
--- @TODO: maybe move these all the node side
-
-
-charImgPath : Character -> String
-charImgPath character =
-    "rsrc/Characters/Portraits/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
-
-
-charIconPath : Character -> String
-charIconPath character =
-    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
-
-
-fourStockCharIconPath : Character -> String
-fourStockCharIconPath character =
-    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ "G" ++ ".png"
-
-
-stageImgPath : String -> String
-stageImgPath stageName =
-    "rsrc/Stages/Icons/" ++ stageName ++ ".png"
-
-
-
--- elements
-
-
-black =
-    rgb255 0 0 0
-
-
-white =
-    rgb255 238 236 229
-
-
-grey =
-    rgb255 25 25 25
-
-
-lighterGrey =
-    rgb255 100 100 100
-
-
-red =
-    rgb255 255 0 0
-
-
-cyan =
-    rgb255 175 238 238
-
-
-gold =
-    rgb255 255 215 0
-
-
-goldenYellow =
-    rgb255 255 215 60
 
 
 
