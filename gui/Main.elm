@@ -8,6 +8,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
+import Element.Input as Input
 import File as File exposing (File)
 import File.Select as Select
 import Html exposing (Html)
@@ -43,6 +44,8 @@ type alias Model =
 type Msg
     = Reset
     | Configure
+    | ToggleTotalDamage Bool
+    | ToggleFavoriteKillMove Bool
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
@@ -59,6 +62,24 @@ update msg model =
 
         Configure ->
             ( { model | modelState = Configuring }
+            , Cmd.none
+            )
+
+        ToggleTotalDamage val ->
+            let
+                newCfg cfg =
+                    { cfg | totalDamage = val }
+            in
+            ( { model | modelConfig = newCfg model.modelConfig }
+            , Cmd.none
+            )
+
+        ToggleFavoriteKillMove val ->
+            let
+                newCfg cfg =
+                    { cfg | favoriteKillMove = val }
+            in
+            ( { model | modelConfig = newCfg model.modelConfig }
             , Cmd.none
             )
 
@@ -167,7 +188,7 @@ view model =
                     viewInit
 
                 Configuring ->
-                    viewInit
+                    viewConfiguration model.modelConfig
 
                 Fail err ->
                     viewFail err
@@ -440,30 +461,68 @@ viewFail err =
     ]
 
 
+viewConfiguration modelCfg =
+    [ el
+        [ Font.extraBold
+        , Font.color white
+        , Font.italic
+        , centerX
+        ]
+        (text "Configure Stats")
+    , row [ spacing 100 ]
+        [ column []
+            [ Input.checkbox []
+                { onChange = ToggleTotalDamage
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.totalDamage
+                , label =
+                    Input.labelRight [ Font.color white ]
+                        (text "Total Damage")
+                }
+            ]
+        , column []
+            [ Input.checkbox []
+                { onChange = ToggleFavoriteKillMove
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.favoriteKillMove
+                , label =
+                    Input.labelRight [ Font.color white ]
+                        (text "Favorite Kill Move")
+                }
+            ]
+        ]
+    , image
+        [ centerX
+        , Element.mouseOver
+            [ Background.color cyan
+            ]
+        , padding 2
+        , Border.rounded 5
+        , Events.onClick FilesRequested
+        , below <|
+            el
+                [ Font.color white
+                , centerX
+                ]
+                (text "Slippi Files")
+        ]
+        { src = "rsrc/Characters/Saga Icons/Smash.png"
+        , description = "Smash Logo Button"
+        }
+    ]
+
+
 viewProgress pct =
     if pct > 0 then
-        [ image
-            [ centerX
-            , Element.mouseOver
-                [ Background.color cyan
-                ]
-            , padding 2
-            , Border.rounded 5
-            , Events.onClick FilesRequested
-            , below <|
-                el
-                    [ Font.color white
-                    , centerX
-                    ]
-                    (text "Slippi Files")
+        [ el
+            [ Font.color white
+            , Font.italic
+            , centerX
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            (text "Computing stats...")
         , el
             [ Font.color white
             , centerX
-            , moveDown 50
             ]
             (text (String.fromInt (round (100 * pct)) ++ "%"))
         ]
@@ -738,10 +797,16 @@ encode model =
         [ ( "modelState"
           , case model.modelState of
                 Waiting ->
-                    E.object []
+                    E.object
+                        [ ( "name", E.string "Waiting" )
+                        , ( "args", E.null )
+                        ]
 
                 Configuring ->
-                    E.object []
+                    E.object
+                        [ ( "name", E.string "Configuring" )
+                        , ( "args", E.null )
+                        ]
 
                 Uploading _ ->
                     E.object []
@@ -750,16 +815,51 @@ encode model =
                     E.object []
 
                 Done stats ->
-                    statsEncoder stats
+                    E.object
+                        [ ( "name", E.string "Done" )
+                        , ( "args", statsEncoder stats )
+                        ]
           )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
         ]
 
 
+type alias PreModelState =
+    { name : String
+    , args : E.Value
+    }
+
+
+decodePreModelState : D.Decoder PreModelState
+decodePreModelState =
+    D.map2 PreModelState
+        (D.field "name" D.string)
+        (D.field "args" D.value)
+
+
 decode : D.Decoder Model
 decode =
     D.map2 Model
-        (D.field "modelState" (statsDecoder |> D.andThen (Done >> D.succeed)))
+        (D.field "modelState"
+            (decodePreModelState
+                |> D.andThen
+                    (\preModelState ->
+                        case preModelState.name of
+                            "Waiting" ->
+                                D.succeed Waiting
+
+                            "Configuring" ->
+                                D.succeed Configuring
+
+                            "Done" ->
+                                D.field "args" statsDecoder
+                                    |> D.andThen (Done >> D.succeed)
+
+                            other ->
+                                D.fail <| "Unsupported model state: " ++ other
+                    )
+            )
+        )
         (D.field "modelConfig" statsConfigDecoder)
 
 
@@ -801,8 +901,8 @@ subscriptions model =
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
     ( case D.decodeValue decode flags of
-        Err _ ->
-            { modelState = Waiting
+        Err fail ->
+            { modelState = Fail fail
             , modelConfig =
                 { totalDamage = True
                 , neutralWins = True
