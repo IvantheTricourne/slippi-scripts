@@ -367,10 +367,10 @@ viewStats stats =
 viewInit =
     [ row
         [ spacing 100
+        , centerX
         ]
         [ image
-            [ centerX
-            , Element.mouseOver
+            [ Element.mouseOver
                 [ Background.color cyan
                 ]
             , padding 2
@@ -387,8 +387,7 @@ viewInit =
             , description = "Smash Logo Button"
             }
         , image
-            [ centerX
-            , Element.mouseOver
+            [ Element.mouseOver
                 [ Background.color cyan
                 ]
             , padding 2
@@ -413,10 +412,12 @@ viewFail err =
         msg =
             D.errorToString err
     in
-    [ row [ spacing 100 ]
+    [ row
+        [ spacing 100
+        , centerX
+        ]
         [ image
-            [ centerX
-            , Element.mouseOver
+            [ Element.mouseOver
                 [ Background.color cyan
                 ]
             , padding 2
@@ -433,8 +434,7 @@ viewFail err =
             , description = "Smash Logo Button"
             }
         , image
-            [ centerX
-            , Element.mouseOver
+            [ Element.mouseOver
                 [ Background.color cyan
                 ]
             , padding 2
@@ -462,53 +462,54 @@ viewFail err =
 
 
 viewConfiguration modelCfg =
-    [ el
-        [ Font.extraBold
+    [ column
+        [ spacing 50
         , Font.color white
-        , Font.italic
-        , centerX
         ]
-        (text "Configure Stats")
-    , row [ spacing 100 ]
-        [ column []
-            [ Input.checkbox []
-                { onChange = ToggleTotalDamage
-                , icon = Input.defaultCheckbox
-                , checked = modelCfg.totalDamage
-                , label =
-                    Input.labelRight [ Font.color white ]
-                        (text "Total Damage")
-                }
+        [ el
+            [ Font.extraBold
+            , Font.italic
+            , centerX
             ]
-        , column []
-            [ Input.checkbox []
-                { onChange = ToggleFavoriteKillMove
-                , icon = Input.defaultCheckbox
-                , checked = modelCfg.favoriteKillMove
-                , label =
-                    Input.labelRight [ Font.color white ]
-                        (text "Favorite Kill Move")
-                }
-            ]
-        ]
-    , image
-        [ centerX
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick FilesRequested
-        , below <|
-            el
-                [ Font.color white
-                , centerX
+            (text "Configure Stats")
+        , row [ spacing 100 ]
+            [ column []
+                [ Input.checkbox []
+                    { onChange = ToggleTotalDamage
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.totalDamage
+                    , label =
+                        Input.labelRight []
+                            (text "Total Damage")
+                    }
                 ]
-                (text "Slippi Files")
+            , column []
+                [ Input.checkbox []
+                    { onChange = ToggleFavoriteKillMove
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.favoriteKillMove
+                    , label =
+                        Input.labelRight []
+                            (text "Favorite Kill Move")
+                    }
+                ]
+            ]
+        , image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <|
+                el [ centerX ]
+                    (text "Slippi Files")
+            ]
+            { src = "rsrc/Characters/Saga Icons/Smash.png"
+            , description = "Smash Logo Button"
+            }
         ]
-        { src = "rsrc/Characters/Saga Icons/Smash.png"
-        , description = "Smash Logo Button"
-        }
     ]
 
 
@@ -561,12 +562,12 @@ listifyPlayerStat mStat =
 
         Just stat ->
             [ Single << String.fromInt << round <| stat.totalDamage
-            , Single << handlePossibleZero <| stat.avgs.avgKillPercent
-            , Single << String.fromInt << round <| stat.avgs.avgDamagePerOpening
-            , Single << handlePossibleZero <| stat.avgs.avgOpeningsPerKill
+            , Single << handlePossibleZero <| stat.avgKillPercent
+            , Single << String.fromInt << round <| stat.avgDamagePerOpening
+            , Single << handlePossibleZero <| stat.avgOpeningsPerKill
             , Single << String.fromInt <| stat.neutralWins
             , Single << String.fromInt <| stat.counterHits
-            , Single << String.fromInt << round <| stat.avgs.avgApm
+            , Single << String.fromInt << round <| stat.avgApm
             , Dub ( stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed )
             , Dub ( stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed )
             ]
@@ -901,8 +902,8 @@ subscriptions model =
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
     ( case D.decodeValue decode flags of
-        Err fail ->
-            { modelState = Fail fail
+        Err _ ->
+            { modelState = Waiting
             , modelConfig =
                 { totalDamage = True
                 , neutralWins = True

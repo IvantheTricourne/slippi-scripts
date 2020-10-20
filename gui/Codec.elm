@@ -18,6 +18,7 @@ module Codec exposing
     )
 
 import Json.Decode as D
+import Json.Decode.Extra as D
 import Json.Encode as E
 import Types exposing (..)
 
@@ -91,23 +92,16 @@ playerEncoder player =
         ]
 
 
-playerStatAvgsEncoder : PlayerStatAvgs -> E.Value
-playerStatAvgsEncoder playerStatAvgs =
-    E.object
-        [ ( "avgApm", E.float playerStatAvgs.avgApm )
-        , ( "avgOpeningsPerKill", E.float playerStatAvgs.avgOpeningsPerKill )
-        , ( "avgDamagePerOpening", E.float playerStatAvgs.avgDamagePerOpening )
-        , ( "avgKillPercent", E.float playerStatAvgs.avgKillPercent )
-        ]
-
-
 playerStatEncoder : PlayerStat -> E.Value
 playerStatEncoder playerStat =
     E.object
         [ ( "totalDamage", E.float playerStat.totalDamage )
         , ( "neutralWins", E.int playerStat.neutralWins )
         , ( "counterHits", E.int playerStat.counterHits )
-        , ( "avgs", playerStatAvgsEncoder playerStat.avgs )
+        , ( "avgApm", E.float playerStat.avgApm )
+        , ( "avgOpeningsPerKill", E.float playerStat.avgOpeningsPerKill )
+        , ( "avgDamagePerOpening", E.float playerStat.avgDamagePerOpening )
+        , ( "avgKillPercent", E.float playerStat.avgKillPercent )
         , ( "favoriteMove", favoriteMoveEncoder playerStat.favoriteMove )
         , ( "favoriteKillMove", favoriteMoveEncoder playerStat.favoriteKillMove )
         , ( "wins", E.int playerStat.wins )
@@ -185,25 +179,19 @@ playerDecoder =
         (D.field "idx" D.int)
 
 
-playerStatAvgsDecoder : D.Decoder PlayerStatAvgs
-playerStatAvgsDecoder =
-    D.map4 PlayerStatAvgs
-        (D.field "avgApm" D.float)
-        (D.field "avgOpeningsPerKill" D.float)
-        (D.field "avgDamagePerOpening" D.float)
-        (D.field "avgKillPercent" D.float)
-
-
 playerStatDecoder : D.Decoder PlayerStat
 playerStatDecoder =
-    D.map7 PlayerStat
-        (D.field "totalDamage" D.float)
-        (D.field "neutralWins" D.int)
-        (D.field "counterHits" D.int)
-        (D.field "avgs" playerStatAvgsDecoder)
-        (D.field "favoriteMove" favoriteMoveDecoder)
-        (D.field "favoriteKillMove" favoriteMoveDecoder)
-        (D.field "wins" D.int)
+    D.succeed PlayerStat
+        |> D.andMap (D.field "totalDamage" D.float)
+        |> D.andMap (D.field "neutralWins" D.int)
+        |> D.andMap (D.field "counterHits" D.int)
+        |> D.andMap (D.field "avgApm" D.float)
+        |> D.andMap (D.field "avgOpeningsPerKill" D.float)
+        |> D.andMap (D.field "avgDamagePerOpening" D.float)
+        |> D.andMap (D.field "avgKillPercent" D.float)
+        |> D.andMap (D.field "favoriteMove" favoriteMoveDecoder)
+        |> D.andMap (D.field "favoriteKillMove" favoriteMoveDecoder)
+        |> D.andMap (D.field "wins" D.int)
 
 
 favoriteMoveDecoder : D.Decoder FavoriteMove
