@@ -42,14 +42,15 @@ yarn run start
 
 ## Usage
 
-* _Visualize game/set stats_:
+### _Visualize game/set stats_:
+
   * The application launches in the "Home" screen
   * Click the smash logo labeled _Stats_ to launch a file selection window
     * _alternatively_, you may choose to click _Configure_ to select which stats you would like to view
   * In the file selection window, select one or more `.slp` files (i.e., use Shift + arrow keys or Shift + click)
   * The application will load and show the combined stats for the provided `.slp` files!
-    * NOTE: At this screen, you may **double-click** anywhere in the center stats column to configure which stats to visualize!
-  * To select a different set of files, click the golden center icon to return to the "Home" screen
+    * NOTE: At this screen, you may **double-click** anywhere in the center stats column to configure which stats to visualize
+  * To select a different set of files, click the center icon to return to the "Home" screen
 
 ## Development
 
