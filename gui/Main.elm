@@ -467,7 +467,7 @@ viewInit =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Slippi Files")
+                    (text "Stats")
             ]
             smashLogo
         , image
@@ -510,7 +510,7 @@ viewFail err =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Slippi Files")
+                    (text "Stats")
             ]
             smashLogo
         , image
