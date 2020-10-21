@@ -243,152 +243,160 @@ viewStats stats modelCfg disabledStats =
         player1Wins =
             getPlayerWinCount stats.playerStats 1
     in
-    [ image
-        [ centerX
-        , centerY
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick <| Goto Waiting
-        , scale 1.25
-        , moveDown 10
-        , onLeft <|
-            (player0Wins
-                |> String.fromInt
-                |> text
-                |> el
-                    [ Font.color white
-                    , Font.extraBold
-                    , scale 1.5
-                    , moveLeft 35
-                    , moveDown 30
-                    ]
-            )
-        , onRight <|
-            (player1Wins
-                |> String.fromInt
-                |> text
-                |> el
-                    [ Font.color white
-                    , Font.extraBold
-                    , scale 1.5
-                    , moveRight 35
-                    , moveDown 30
-                    ]
-            )
+    [ column
+        [ spacing <| 10 + disabledStats * 5
         ]
-        (winnerSagaIcon stats.sagaIcon)
-    , row
-        [ centerX
-        , centerY
-        , spacing 10
-        , padding 10
-        ]
-        [ renderStatColumn modelCfg
-            [ Font.color white
-            , Font.alignRight
+        [ image
+            [ centerX
+            , centerY
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Goto Waiting
+            , scale 1.25
+            , moveDown 10
             , onLeft <|
-                image
-                    [ centerX
-                    , centerY
-                    , scale 1.5
-                    , useWinnerBackgroundGradient player0Wins player1Wins
-                    , Border.rounded 5
-                    , moveRight 55
-                    , moveDown 5
-                    , padding 1
-                    , above <|
-                        el
-                            [ centerX
-                            , Font.extraBold
-                            , scale 0.75
-                            ]
-                            (text <| renderPlayerName player0)
-                    , onLeft <|
-                        renderSecondaries
-                            [ centerX
-                            , centerY
-                            , spacing 5
-                            , scale 0.7
-                            ]
-                            player0
-                    ]
-                    { src = charImgPath player0.character
-                    , description = renderPlayerName player0
-                    }
-            , spacing 15
-            ]
-            [ centerX
-            , Font.italic
-            , scale 0.6
-            , moveRight 80
-            , moveUp 4
-            ]
-            (listifyPlayerStat <| Array.get 0 stats.playerStats)
-        , renderStatColumn modelCfg
-            [ Font.color white
-            , Font.center
-            , Font.bold
-            , Font.italic
-            , spacing 15
-            , Events.onDoubleClick <| Configure (Just stats)
-            ]
-            []
-            [ Single .totalDamage "Total Damage"
-            , Single .avgKillPercent "Average Kill Percent"
-            , Single .avgDamagePerOpening "Damage / Opening"
-            , Single .avgOpeningsPerKill "Openings / Kill"
-            , Single .neutralWins "Neutral Wins"
-            , Single .counterHits "Counter Hits"
-            , Single .avgApm "APM"
-            , Single .favoriteMove "Favorite Move"
-            , Single .favoriteKillMove "Favorite Kill Move"
-            ]
-        , renderStatColumn modelCfg
-            [ Font.color white
-            , Font.alignLeft
+                (player0Wins
+                    |> String.fromInt
+                    |> text
+                    |> el
+                        [ Font.color white
+                        , Font.extraBold
+                        , scale 1.5
+                        , moveLeft 35
+                        , moveDown 30
+                        ]
+                )
             , onRight <|
-                image
-                    [ centerX
-                    , centerY
-                    , scale 1.5
-                    , useWinnerBackgroundGradient player1Wins player0Wins
-                    , Border.rounded 5
-                    , moveLeft 55
-                    , moveDown 5
-                    , padding 1
-                    , above <|
-                        el
-                            [ centerX
-                            , Font.extraBold
-                            , scale 0.75
-                            ]
-                            (text <| renderPlayerName player1)
-                    , onRight <|
-                        renderSecondaries
-                            [ centerX
-                            , centerY
-                            , spacing 5
-                            , scale 0.7
-                            ]
-                            player1
-                    ]
-                    { src = charImgPath player1.character
-                    , description = renderPlayerName player1
-                    }
-            , spacing 15
+                (player1Wins
+                    |> String.fromInt
+                    |> text
+                    |> el
+                        [ Font.color white
+                        , Font.extraBold
+                        , scale 1.5
+                        , moveRight 35
+                        , moveDown 30
+                        ]
+                )
             ]
+            (winnerSagaIcon stats.sagaIcon)
+        , row
             [ centerX
-            , Font.italic
-            , scale 0.6
-            , moveLeft 80
-            , moveUp 4
+            , centerY
+            , spacing 10
+            , padding 10
             ]
-            (listifyPlayerStat <| Array.get 1 stats.playerStats)
+            [ renderStatColumn modelCfg
+                [ Font.color white
+                , Font.alignRight
+                , onLeft <|
+                    image
+                        [ centerX
+                        , centerY
+                        , scale 1.5
+                        , useWinnerBackgroundGradient player0Wins player1Wins
+                        , Border.rounded 5
+                        , moveRight 55
+
+                        --                        , moveDown 5
+                        , moveUp <| -5 + toFloat disabledStats * 2.5
+                        , padding 1
+                        , above <|
+                            el
+                                [ centerX
+                                , Font.extraBold
+                                , scale 0.75
+                                ]
+                                (text <| renderPlayerName player0)
+                        , onLeft <|
+                            renderSecondaries
+                                [ centerX
+                                , centerY
+                                , spacing 5
+                                , scale 0.7
+                                ]
+                                player0
+                        ]
+                        { src = charImgPath player0.character
+                        , description = renderPlayerName player0
+                        }
+                , spacing 15
+                ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveRight 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| Array.get 0 stats.playerStats)
+            , renderStatColumn modelCfg
+                [ Font.color white
+                , Font.center
+                , Font.bold
+                , Font.italic
+                , spacing 15
+                , Events.onDoubleClick <| Configure (Just stats)
+                ]
+                []
+                [ Single .totalDamage "Total Damage"
+                , Single .avgKillPercent "Average Kill Percent"
+                , Single .avgDamagePerOpening "Damage / Opening"
+                , Single .avgOpeningsPerKill "Openings / Kill"
+                , Single .neutralWins "Neutral Wins"
+                , Single .counterHits "Counter Hits"
+                , Single .avgApm "APM"
+                , Single .favoriteMove "Favorite Move"
+                , Single .favoriteKillMove "Favorite Kill Move"
+                ]
+            , renderStatColumn modelCfg
+                [ Font.color white
+                , Font.alignLeft
+                , onRight <|
+                    image
+                        [ centerX
+                        , centerY
+                        , scale 1.5
+                        , useWinnerBackgroundGradient player1Wins player0Wins
+                        , Border.rounded 5
+                        , moveLeft 55
+                        , moveUp <| -5 + toFloat disabledStats * 2.5
+
+                        -- , moveDown 5
+                        , padding 1
+                        , above <|
+                            el
+                                [ centerX
+                                , Font.extraBold
+                                , scale 0.75
+                                ]
+                                (text <| renderPlayerName player1)
+                        , onRight <|
+                            renderSecondaries
+                                [ centerX
+                                , centerY
+                                , spacing 5
+                                , scale 0.7
+                                ]
+                                player1
+                        ]
+                        { src = charImgPath player1.character
+                        , description = renderPlayerName player1
+                        }
+                , spacing 15
+                ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveLeft 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| Array.get 1 stats.playerStats)
+            ]
+        , renderStageImgsWithWinner (Array.toList stats.games) disabledStats
         ]
-    , renderStageImgsWithWinner (Array.toList stats.games) disabledStats
     ]
 
 
@@ -488,8 +496,22 @@ viewConfiguration modelCfg mStats =
         ]
         [ el
             [ Font.extraBold
-            , Font.italic
+            , scale 1.25
+            , moveUp 20
             , centerX
+            , below <|
+                el
+                    [ centerX
+                    , moveUp 10
+                    , below <|
+                        el
+                            [ centerX
+                            , scale 0.4
+                            , Font.italic
+                            ]
+                            (text "Please choose at least 6 stats! :)")
+                    ]
+                    (text "___________________")
             ]
             (text "Configure Stats")
         , row
@@ -678,7 +700,7 @@ renderStageImgsWithWinner games disabledStats =
         , spacing 15
         , padding 10
         , centerX
-        , moveDown <| 25 + (toFloat disabledStats * 25)
+        , moveDown <| 25 + (toFloat disabledStats * 5)
         ]
     <|
         List.indexedMap renderStageAndWinnerIcon games
