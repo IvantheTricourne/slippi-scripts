@@ -27,7 +27,7 @@ import Types exposing (..)
 
 type StatsStatus
     = Waiting
-    | Configuring
+    | Configuring (Maybe Stats)
     | Uploading Float
     | Done Stats
     | Fail D.Error
@@ -45,8 +45,8 @@ type alias Model =
 
 
 type Msg
-    = Reset
-    | Configure
+    = Goto StatsStatus
+    | Configure (Maybe Stats)
     | Toggle StatsConfigField Bool
     | FilesRequested
     | FilesSelected File (List File)
@@ -88,13 +88,13 @@ toggleField field val statsCfg =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Reset ->
-            ( { model | modelState = Waiting }
+        Goto status ->
+            ( { model | modelState = status }
             , Cmd.none
             )
 
-        Configure ->
-            ( { model | modelState = Configuring }
+        Configure mStats ->
+            ( { model | modelState = Configuring mStats }
             , Cmd.none
             )
 
@@ -215,8 +215,8 @@ view model =
                 Waiting ->
                     viewInit
 
-                Configuring ->
-                    viewConfiguration model.modelConfig
+                Configuring mStats ->
+                    viewConfiguration model.modelConfig mStats
 
                 Fail err ->
                     viewFail err
@@ -251,7 +251,7 @@ viewStats stats modelCfg disabledStats =
             ]
         , padding 2
         , Border.rounded 5
-        , Events.onClick Reset
+        , Events.onClick <| Goto Waiting
         , scale 1.25
         , moveDown 10
         , onLeft <|
@@ -333,7 +333,7 @@ viewStats stats modelCfg disabledStats =
             , Font.bold
             , Font.italic
             , spacing 15
-            , Events.onDoubleClick Configure
+            , Events.onDoubleClick <| Configure (Just stats)
             ]
             []
             [ Single .totalDamage "Total Damage"
@@ -418,7 +418,7 @@ viewInit =
                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick Configure
+            , Events.onClick <| Configure Nothing
             , below <|
                 el
                     [ Font.color white
@@ -461,7 +461,7 @@ viewFail err =
                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick Configure
+            , Events.onClick <| Configure Nothing
             , below <|
                 el
                     [ Font.color white
@@ -481,7 +481,7 @@ viewFail err =
     ]
 
 
-viewConfiguration modelCfg =
+viewConfiguration modelCfg mStats =
     [ column
         [ spacing 50
         , Font.color white
@@ -579,10 +579,18 @@ viewConfiguration modelCfg =
                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick FilesRequested
+            , Events.onClick <|
+                Goto
+                    (case mStats of
+                        Nothing ->
+                            Waiting
+
+                        Just stats ->
+                            Done stats
+                    )
             , below <|
                 el [ centerX ]
-                    (text "Slippi Files")
+                    (text "Save")
             ]
             smashLogo
         ]
@@ -829,35 +837,45 @@ updateWithStorage msg oldModel =
 -- model codecs
 
 
+encodeModelState : StatsStatus -> E.Value
+encodeModelState status =
+    case status of
+        Waiting ->
+            E.object
+                [ ( "name", E.string "Waiting" )
+                , ( "args", E.null )
+                ]
+
+        Configuring mStats ->
+            E.object
+                [ ( "name", E.string "Configuring" )
+                , ( "args"
+                  , case mStats of
+                        Nothing ->
+                            E.null
+
+                        Just stats ->
+                            statsEncoder stats
+                  )
+                ]
+
+        Uploading _ ->
+            E.object []
+
+        Fail _ ->
+            E.object []
+
+        Done stats ->
+            E.object
+                [ ( "name", E.string "Done" )
+                , ( "args", statsEncoder stats )
+                ]
+
+
 encode : Model -> E.Value
 encode model =
     E.object
-        [ ( "modelState"
-          , case model.modelState of
-                Waiting ->
-                    E.object
-                        [ ( "name", E.string "Waiting" )
-                        , ( "args", E.null )
-                        ]
-
-                Configuring ->
-                    E.object
-                        [ ( "name", E.string "Configuring" )
-                        , ( "args", E.null )
-                        ]
-
-                Uploading _ ->
-                    E.object []
-
-                Fail _ ->
-                    E.object []
-
-                Done stats ->
-                    E.object
-                        [ ( "name", E.string "Done" )
-                        , ( "args", statsEncoder stats )
-                        ]
-          )
+        [ ( "modelState", encodeModelState model.modelState )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
         , ( "disabledStats", E.int model.disabledStats )
         ]
@@ -876,27 +894,30 @@ decodePreModelState =
         (D.field "args" D.value)
 
 
+preModelStateToState : PreModelState -> D.Decoder StatsStatus
+preModelStateToState preModelState =
+    case preModelState.name of
+        "Waiting" ->
+            D.succeed Waiting
+
+        "Configuring" ->
+            D.field "args" (D.nullable statsDecoder)
+                |> D.andThen (Configuring >> D.succeed)
+
+        "Done" ->
+            D.field "args" statsDecoder
+                |> D.andThen (Done >> D.succeed)
+
+        other ->
+            D.fail <| "Unsupported model state: " ++ other
+
+
 decode : D.Decoder Model
 decode =
     D.map3 Model
         (D.field "modelState"
             (decodePreModelState
-                |> D.andThen
-                    (\preModelState ->
-                        case preModelState.name of
-                            "Waiting" ->
-                                D.succeed Waiting
-
-                            "Configuring" ->
-                                D.succeed Configuring
-
-                            "Done" ->
-                                D.field "args" statsDecoder
-                                    |> D.andThen (Done >> D.succeed)
-
-                            other ->
-                                D.fail <| "Unsupported model state: " ++ other
-                    )
+                |> D.andThen preModelStateToState
             )
         )
         (D.field "modelConfig" statsConfigDecoder)
