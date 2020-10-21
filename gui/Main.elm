@@ -37,6 +37,7 @@ type alias Model =
     { modelState : StatsStatus
     , modelConfig : StatsConfig
     , disabledStats : Int
+    , stagePage : Int
     }
 
 
@@ -47,6 +48,7 @@ type alias Model =
 type Msg
     = Goto StatsStatus
     | Configure (Maybe Stats)
+    | UpdatePage (Int -> Int)
     | Toggle StatsConfigField Bool
     | FilesRequested
     | FilesSelected File (List File)
@@ -101,6 +103,11 @@ update msg model =
 
         Configure mStats ->
             ( { model | modelState = Configuring mStats }
+            , Cmd.none
+            )
+
+        UpdatePage incDec ->
+            ( { model | stagePage = incDec model.stagePage }
             , Cmd.none
             )
 
@@ -166,7 +173,10 @@ update msg model =
                     )
 
         FilesRequested ->
-            ( { model | modelState = Uploading 0 }
+            ( { model
+                | modelState = Uploading 0
+                , stagePage = 0
+              }
             , Select.files [ "*" ] FilesSelected
             )
 
@@ -248,7 +258,7 @@ view model =
                                         ]
                                         (viewConfiguration model.modelConfig mStats)
                                 ]
-                                (viewStats stats model.modelConfig model.disabledStats 0.1)
+                                (viewStats stats model.modelConfig model.disabledStats model.stagePage 0.1)
                             ]
 
                 Fail err ->
@@ -258,11 +268,11 @@ view model =
                     viewProgress pct
 
                 Done stats ->
-                    viewStats stats model.modelConfig model.disabledStats 1
+                    viewStats stats model.modelConfig model.disabledStats model.stagePage 1
             )
 
 
-viewStats stats modelCfg disabledStats alphaVal =
+viewStats stats modelCfg disabledStats stagePage alphaVal =
     let
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
@@ -442,7 +452,7 @@ viewStats stats modelCfg disabledStats alphaVal =
                 (listifyPlayerStat <| Array.get 1 stats.playerStats)
             ]
         , if modelCfg.stages then
-            renderStageImgsWithWinner (Array.toList stats.games) disabledStats
+            renderStageImgsWithWinner (Array.toList stats.games) disabledStats stagePage
 
           else
             none
@@ -780,7 +790,14 @@ useWinnerBackgroundGradient playerWins opponentWins showWinner =
             }
 
 
-renderStageImgsWithWinner games disabledStats =
+renderStageImgsWithWinner games disabledStats stagePage =
+    let
+        renderedStageImgs =
+            List.indexedMap renderStageAndWinnerIcon games
+
+        ( totalPages, pages ) =
+            paginateStageImgs renderedStageImgs 0
+    in
     wrappedRow
         [ Background.color black
         , Border.rounded 5
@@ -788,9 +805,78 @@ renderStageImgsWithWinner games disabledStats =
         , padding 10
         , centerX
         , moveDown <| 25 + (toFloat disabledStats * 5)
+        , below <|
+            if totalPages > 1 then
+                el
+                    [ Font.color grey
+                    , Font.extraBold
+                    , scale 0.75
+                    , centerX
+                    , moveDown 50
+                    , onLeft <|
+                        el
+                            [ Font.color grey
+                            , Font.extraBold
+                            , paddingXY 20 10
+                            , Element.mouseOver
+                                [ Background.color lighterGrey
+                                ]
+                            , Border.rounded 6
+                            , centerY
+                            , moveLeft 10
+                            , moveUp 10
+                            , Events.onClick <| UpdatePage ((-) 1)
+                            ]
+                            (text "<")
+                    , onRight <|
+                        el
+                            [ Font.color grey
+                            , Font.extraBold
+                            , paddingXY 20 10
+                            , Element.mouseOver
+                                [ Background.color lighterGrey
+                                ]
+                            , Border.rounded 6
+                            , centerY
+                            , moveRight 10
+                            , moveUp 10
+                            , Events.onClick <| UpdatePage ((+) 1)
+                            ]
+                            (text ">")
+                    ]
+                    (stagePage
+                        |> remainderBy totalPages
+                        >> abs
+                        >> (+) 1
+                        |> String.fromInt
+                        |> text
+                    )
+
+            else
+                none
         ]
     <|
-        List.indexedMap renderStageAndWinnerIcon games
+        case Array.get (abs << remainderBy totalPages <| stagePage) pages of
+            Nothing ->
+                []
+
+            Just stages ->
+                stages
+
+
+paginateStageImgs renderedStageImgs totalPages =
+    if List.isEmpty renderedStageImgs then
+        ( totalPages, Array.empty )
+
+    else
+        let
+            ( pageCount, pages ) =
+                paginateStageImgs (List.drop 10 renderedStageImgs) totalPages
+
+            newPage =
+                Array.fromList [ List.take 10 renderedStageImgs ]
+        in
+        ( pageCount + 1, Array.append newPage pages )
 
 
 renderStageAndWinnerIcon gameNum gameInfo =
@@ -987,6 +1073,7 @@ encode model =
         [ ( "modelState", encodeModelState model.modelState )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
         , ( "disabledStats", E.int model.disabledStats )
+        , ( "stagePage", E.int model.stagePage )
         ]
 
 
@@ -1023,7 +1110,7 @@ preModelStateToState preModelState =
 
 decode : D.Decoder Model
 decode =
-    D.map3 Model
+    D.map4 Model
         (D.field "modelState"
             (decodePreModelState
                 |> D.andThen preModelStateToState
@@ -1031,6 +1118,7 @@ decode =
         )
         (D.field "modelConfig" statsConfigDecoder)
         (D.field "disabledStats" D.int)
+        (D.field "stagePage" D.int)
 
 
 defaultPlayer : Player
@@ -1084,6 +1172,7 @@ init flags =
             { modelState = Waiting
             , modelConfig = defaultStatsConfig
             , disabledStats = 0
+            , stagePage = 0
             }
 
         Ok model ->
