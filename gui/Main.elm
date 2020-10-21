@@ -84,6 +84,12 @@ toggleField field val statsCfg =
         FavoriteKillMoveF ->
             { statsCfg | favoriteKillMove = val }
 
+        SetCountAndWinnerF ->
+            { statsCfg | setCountAndWinner = val }
+
+        StagesF ->
+            { statsCfg | stages = val }
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -246,43 +252,59 @@ viewStats stats modelCfg disabledStats =
     [ column
         [ spacing <| 10 + disabledStats * 5
         ]
-        [ image
-            [ centerX
-            , centerY
-            , Element.mouseOver
-                [ Background.color cyan
+        [ if modelCfg.setCountAndWinner then
+            image
+                [ centerX
+                , centerY
+                , Element.mouseOver
+                    [ Background.color cyan
+                    ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick <| Goto Waiting
+                , scale 1.25
+                , moveDown 10
+                , onLeft <|
+                    (player0Wins
+                        |> String.fromInt
+                        |> text
+                        |> el
+                            [ Font.color white
+                            , Font.extraBold
+                            , scale 1.5
+                            , moveLeft 35
+                            , moveDown 30
+                            ]
+                    )
+                , onRight <|
+                    (player1Wins
+                        |> String.fromInt
+                        |> text
+                        |> el
+                            [ Font.color white
+                            , Font.extraBold
+                            , scale 1.5
+                            , moveRight 35
+                            , moveDown 30
+                            ]
+                    )
                 ]
-            , padding 2
-            , Border.rounded 5
-            , Events.onClick <| Goto Waiting
-            , scale 1.25
-            , moveDown 10
-            , onLeft <|
-                (player0Wins
-                    |> String.fromInt
-                    |> text
-                    |> el
-                        [ Font.color white
-                        , Font.extraBold
-                        , scale 1.5
-                        , moveLeft 35
-                        , moveDown 30
-                        ]
-                )
-            , onRight <|
-                (player1Wins
-                    |> String.fromInt
-                    |> text
-                    |> el
-                        [ Font.color white
-                        , Font.extraBold
-                        , scale 1.5
-                        , moveRight 35
-                        , moveDown 30
-                        ]
-                )
-            ]
-            (winnerSagaIcon stats.sagaIcon)
+                (winnerSagaIcon stats.sagaIcon)
+
+          else
+            image
+                [ centerX
+                , centerY
+                , Element.mouseOver
+                    [ Background.color cyan
+                    ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick <| Goto Waiting
+                , scale 1.25
+                , moveDown 10
+                ]
+                smashLogo
         , row
             [ centerX
             , centerY
@@ -297,11 +319,9 @@ viewStats stats modelCfg disabledStats =
                         [ centerX
                         , centerY
                         , scale 1.5
-                        , useWinnerBackgroundGradient player0Wins player1Wins
+                        , useWinnerBackgroundGradient player0Wins player1Wins modelCfg.setCountAndWinner
                         , Border.rounded 5
                         , moveRight 55
-
-                        --                        , moveDown 5
                         , moveUp <| -5 + toFloat disabledStats * 2.5
                         , padding 1
                         , above <|
@@ -359,12 +379,10 @@ viewStats stats modelCfg disabledStats =
                         [ centerX
                         , centerY
                         , scale 1.5
-                        , useWinnerBackgroundGradient player1Wins player0Wins
+                        , useWinnerBackgroundGradient player1Wins player0Wins modelCfg.setCountAndWinner
                         , Border.rounded 5
                         , moveLeft 55
                         , moveUp <| -5 + toFloat disabledStats * 2.5
-
-                        -- , moveDown 5
                         , padding 1
                         , above <|
                             el
@@ -395,7 +413,11 @@ viewStats stats modelCfg disabledStats =
                 ]
                 (listifyPlayerStat <| Array.get 1 stats.playerStats)
             ]
-        , renderStageImgsWithWinner (Array.toList stats.games) disabledStats
+        , if modelCfg.stages then
+            renderStageImgsWithWinner (Array.toList stats.games) disabledStats
+
+          else
+            none
         ]
     ]
 
@@ -491,7 +513,7 @@ viewFail err =
 
 viewConfiguration modelCfg mStats =
     [ column
-        [ spacing 50
+        [ spacing 35
         , Font.color white
         ]
         [ el
@@ -515,7 +537,8 @@ viewConfiguration modelCfg mStats =
             ]
             (text "Configure Stats")
         , row
-            [ spacing 100
+            [ spacing 75
+            , centerX
             ]
             [ column [ spacing 10 ]
                 [ Input.checkbox []
@@ -593,6 +616,42 @@ viewConfiguration modelCfg mStats =
                             (text "APM")
                     }
                 ]
+            ]
+        , el
+            [ Font.extraBold
+            , scale 1.25
+            , moveUp 20
+            , centerX
+            , below <|
+                el
+                    [ centerX
+                    , moveDown 2
+                    , scale 0.5
+                    , Font.italic
+                    ]
+                    (text "General Layout Stats")
+            ]
+            (text "___________________")
+        , row
+            [ spacing 50
+            , centerX
+            ]
+            [ Input.checkbox []
+                { onChange = Toggle SetCountAndWinnerF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.setCountAndWinner
+                , label =
+                    Input.labelRight []
+                        (text "Set Count + Winner")
+                }
+            , Input.checkbox []
+                { onChange = Toggle StagesF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.stages
+                , label =
+                    Input.labelRight []
+                        (text "Stages + Stocks")
+                }
             ]
         , image
             [ centerX
@@ -679,8 +738,8 @@ listifyPlayerStat mStat =
             ]
 
 
-useWinnerBackgroundGradient playerWins opponentWins =
-    if playerWins > opponentWins then
+useWinnerBackgroundGradient playerWins opponentWins showWinner =
+    if playerWins > opponentWins && showWinner then
         Background.gradient
             { angle = 3.14
             , steps = [ black, goldenYellow ]
@@ -972,6 +1031,8 @@ defaultStatsConfig =
     , avgKillPercent = True
     , favoriteMove = True
     , favoriteKillMove = True
+    , setCountAndWinner = True
+    , stages = True
     }
 
 

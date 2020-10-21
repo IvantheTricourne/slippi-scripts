@@ -38,6 +38,8 @@ statsConfigEncoder statsCfg =
         , ( "avgKillPercent", E.bool statsCfg.avgKillPercent )
         , ( "favoriteMove", E.bool statsCfg.favoriteMove )
         , ( "favoriteKillMove", E.bool statsCfg.favoriteKillMove )
+        , ( "setCountAndWinner", E.bool statsCfg.setCountAndWinner )
+        , ( "stages", E.bool statsCfg.stages )
         ]
 
 
@@ -131,6 +133,8 @@ statsConfigDecoder =
         |> D.andMap (D.field "avgKillPercent" D.bool)
         |> D.andMap (D.field "favoriteMove" D.bool)
         |> D.andMap (D.field "favoriteKillMove" D.bool)
+        |> D.andMap (D.field "setCountAndWinner" D.bool)
+        |> D.andMap (D.field "stages" D.bool)
 
 
 statsDecoder : D.Decoder Stats

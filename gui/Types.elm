@@ -25,6 +25,8 @@ type StatsConfigField
     | AvgKillPercentF
     | FavoriteMoveF
     | FavoriteKillMoveF
+    | SetCountAndWinnerF
+    | StagesF
 
 
 type alias StatsConfig =
@@ -37,6 +39,8 @@ type alias StatsConfig =
     , avgKillPercent : Bool
     , favoriteMove : Bool
     , favoriteKillMove : Bool
+    , setCountAndWinner : Bool
+    , stages : Bool
     }
 
 
