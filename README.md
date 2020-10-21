@@ -19,7 +19,7 @@ A collection of Slippi scripts and other vaguely useful things.
 
 _Visualize game/set stats!_
 
-![Slippi Stats Screenshot](demo/stats-screen.png)
+![Slippi Stats](demo/demo.gif)
 
 _Many more in the making!_
 
