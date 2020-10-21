@@ -108,11 +108,20 @@ update msg model =
             ( { model
                 | modelConfig = toggleField field bool model.modelConfig
                 , disabledStats =
-                    if bool then
-                        model.disabledStats - 1
+                    case field of
+                        -- General layouts don't count
+                        SetCountAndWinnerF ->
+                            model.disabledStats
 
-                    else
-                        model.disabledStats + 1
+                        StagesF ->
+                            model.disabledStats
+
+                        _ ->
+                            if bool then
+                                model.disabledStats - 1
+
+                            else
+                                model.disabledStats + 1
               }
             , Cmd.none
             )
@@ -222,7 +231,25 @@ view model =
                     viewInit
 
                 Configuring mStats ->
-                    viewConfiguration model.modelConfig mStats
+                    case mStats of
+                        Nothing ->
+                            viewConfiguration model.modelConfig mStats
+
+                        Just stats ->
+                            [ column
+                                [ centerX
+                                , centerY
+                                , spacing 10
+                                , inFront <|
+                                    column
+                                        [ centerX
+                                        , centerY
+                                        , spacing 10
+                                        ]
+                                        (viewConfiguration model.modelConfig mStats)
+                                ]
+                                (viewStats stats model.modelConfig model.disabledStats 0.1)
+                            ]
 
                 Fail err ->
                     viewFail err
@@ -231,11 +258,11 @@ view model =
                     viewProgress pct
 
                 Done stats ->
-                    viewStats stats model.modelConfig model.disabledStats
+                    viewStats stats model.modelConfig model.disabledStats 1
             )
 
 
-viewStats stats modelCfg disabledStats =
+viewStats stats modelCfg disabledStats alphaVal =
     let
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
@@ -251,6 +278,7 @@ viewStats stats modelCfg disabledStats =
     in
     [ column
         [ spacing <| 10 + disabledStats * 5
+        , alpha alphaVal
         ]
         [ if modelCfg.setCountAndWinner then
             image
@@ -513,7 +541,7 @@ viewFail err =
 
 viewConfiguration modelCfg mStats =
     [ column
-        [ spacing 35
+        [ spacing 50
         , Font.color white
         ]
         [ el
@@ -533,7 +561,7 @@ viewConfiguration modelCfg mStats =
                             ]
                             (text "Please choose at least 6 stats! :)")
                     ]
-                    (text "___________________")
+                    (text "____________________________")
             ]
             (text "Configure Stats")
         , row
@@ -631,7 +659,7 @@ viewConfiguration modelCfg mStats =
                     ]
                     (text "General Layout Stats")
             ]
-            (text "___________________")
+            (text "____________________________")
         , row
             [ spacing 50
             , centerX
