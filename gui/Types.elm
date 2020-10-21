@@ -5,13 +5,43 @@ module Types exposing
     , Game
     , Player
     , PlayerStat
-    , PlayerStatAvgs
     , Stats
+    , StatsConfig
+    , StatsConfigField(..)
     , StatsResponse
     )
 
 import Array exposing (Array)
 import Json.Decode exposing (Value)
+
+
+type StatsConfigField
+    = TotalDamageF
+    | NeutralWinsF
+    | CounterHitsF
+    | AvgApmF
+    | AvgOpeningsPerKillF
+    | AvgDamagePerOpeningF
+    | AvgKillPercentF
+    | FavoriteMoveF
+    | FavoriteKillMoveF
+    | SetCountAndWinnerF
+    | StagesF
+
+
+type alias StatsConfig =
+    { totalDamage : Bool
+    , neutralWins : Bool
+    , counterHits : Bool
+    , avgApm : Bool
+    , avgOpeningsPerKill : Bool
+    , avgDamagePerOpening : Bool
+    , avgKillPercent : Bool
+    , favoriteMove : Bool
+    , favoriteKillMove : Bool
+    , setCountAndWinner : Bool
+    , stages : Bool
+    }
 
 
 type alias StatsResponse =
@@ -55,19 +85,14 @@ type alias Player =
     }
 
 
-type alias PlayerStatAvgs =
-    { avgApm : Float
-    , avgOpeningsPerKill : Float
-    , avgDamagePerOpening : Float
-    , avgKillPercent : Float
-    }
-
-
 type alias PlayerStat =
     { totalDamage : Float
     , neutralWins : Int
     , counterHits : Int
-    , avgs : PlayerStatAvgs
+    , avgApm : Float
+    , avgOpeningsPerKill : Float
+    , avgDamagePerOpening : Float
+    , avgKillPercent : Float
     , favoriteMove : FavoriteMove
     , favoriteKillMove : FavoriteMove
     , wins : Int
@@ -86,5 +111,5 @@ type alias FavoriteMove =
 
 
 type CellValue
-    = Single String
-    | Dub ( String, String )
+    = Single (StatsConfig -> Bool) String
+    | Dub (StatsConfig -> Bool) String String

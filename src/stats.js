@@ -270,7 +270,6 @@ function getStats(files, players = []) {
                 "totalDamage": 0,
                 "neutralWins": 0,
                 "counterHits": 0,
-                "avgs": {},
                 "kills": 0,
                 "wins": 0
             },
@@ -278,7 +277,6 @@ function getStats(files, players = []) {
                 "totalDamage": 0,
                 "neutralWins": 0,
                 "counterHits": 0,
-                "avgs": {},
                 "kills": 0,
                 "wins": 0
             }
@@ -453,10 +451,10 @@ function getStats(files, players = []) {
     // write avgs
     _.each(playerTotals, (totals, i) => {
         // console.log(totals);
-        statsJson.playerStats[i].avgs.avgApm = totals.apms / totalGames;
-        statsJson.playerStats[i].avgs.avgOpeningsPerKill = totals.openingsPerKills / totalGames;
-        statsJson.playerStats[i].avgs.avgDamagePerOpening = totals.damagePerOpenings / totalGames;
-        statsJson.playerStats[i].avgs.avgKillPercent = totals.killPercentGameAvgs / totalGames;
+        statsJson.playerStats[i].avgApm = totals.apms / totalGames;
+        statsJson.playerStats[i].avgOpeningsPerKill = totals.openingsPerKills / totalGames;
+        statsJson.playerStats[i].avgDamagePerOpening = totals.damagePerOpenings / totalGames;
+        statsJson.playerStats[i].avgKillPercent = totals.killPercentGameAvgs / totalGames;
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
     });

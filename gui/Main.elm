@@ -3,11 +3,13 @@ port module Main exposing (..)
 import Array
 import Browser
 import Codec exposing (..)
+import Colors exposing (..)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
+import Element.Input as Input
 import File as File exposing (File)
 import File.Select as Select
 import Html exposing (Html)
@@ -15,6 +17,7 @@ import Http as Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe
+import Resources exposing (..)
 import Types exposing (..)
 
 
@@ -22,11 +25,19 @@ import Types exposing (..)
 -- model
 
 
-type Model
+type StatsStatus
     = Waiting
+    | Configuring (Maybe Stats)
     | Uploading Float
     | Done Stats
     | Fail D.Error
+
+
+type alias Model =
+    { modelState : StatsStatus
+    , modelConfig : StatsConfig
+    , disabledStats : Int
+    }
 
 
 
@@ -34,25 +45,93 @@ type Model
 
 
 type Msg
-    = Reset
+    = Goto StatsStatus
+    | Configure (Maybe Stats)
+    | Toggle StatsConfigField Bool
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
     | Uploaded (Result Http.Error StatsResponse)
 
 
+toggleField : StatsConfigField -> Bool -> StatsConfig -> StatsConfig
+toggleField field val statsCfg =
+    case field of
+        TotalDamageF ->
+            { statsCfg | totalDamage = val }
+
+        NeutralWinsF ->
+            { statsCfg | neutralWins = val }
+
+        CounterHitsF ->
+            { statsCfg | counterHits = val }
+
+        AvgApmF ->
+            { statsCfg | avgApm = val }
+
+        AvgOpeningsPerKillF ->
+            { statsCfg | avgOpeningsPerKill = val }
+
+        AvgDamagePerOpeningF ->
+            { statsCfg | avgDamagePerOpening = val }
+
+        AvgKillPercentF ->
+            { statsCfg | avgKillPercent = val }
+
+        FavoriteMoveF ->
+            { statsCfg | favoriteMove = val }
+
+        FavoriteKillMoveF ->
+            { statsCfg | favoriteKillMove = val }
+
+        SetCountAndWinnerF ->
+            { statsCfg | setCountAndWinner = val }
+
+        StagesF ->
+            { statsCfg | stages = val }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Reset ->
-            ( Waiting
+        Goto status ->
+            ( { model | modelState = status }
+            , Cmd.none
+            )
+
+        Configure mStats ->
+            ( { model | modelState = Configuring mStats }
+            , Cmd.none
+            )
+
+        Toggle field bool ->
+            ( { model
+                | modelConfig = toggleField field bool model.modelConfig
+                , disabledStats =
+                    case field of
+                        -- General layouts don't count
+                        SetCountAndWinnerF ->
+                            model.disabledStats
+
+                        StagesF ->
+                            model.disabledStats
+
+                        _ ->
+                            if bool then
+                                model.disabledStats - 1
+
+                            else
+                                model.disabledStats + 1
+              }
             , Cmd.none
             )
 
         GotProgress progress ->
             case progress of
                 Http.Sending p ->
-                    ( Uploading (Http.fractionSent p), Cmd.none )
+                    ( { model | modelState = Uploading (Http.fractionSent p) }
+                    , Cmd.none
+                    )
 
                 Http.Receiving _ ->
                     ( model, Cmd.none )
@@ -61,23 +140,33 @@ update msg model =
             case result of
                 Ok statsResponse ->
                     if statsResponse.totalGames == 0 then
-                        ( Fail <| D.Failure "No valid games found" statsResponse.stats
+                        ( { model
+                            | modelState =
+                                Fail <|
+                                    D.Failure "No valid games found" statsResponse.stats
+                          }
                         , Cmd.none
                         )
 
                     else
                         case D.decodeValue statsDecoder statsResponse.stats of
                             Ok stats ->
-                                ( Done stats, Cmd.none )
+                                ( { model | modelState = Done stats }, Cmd.none )
 
                             Err statsDErr ->
-                                ( Fail statsDErr, Cmd.none )
+                                ( { model | modelState = Fail statsDErr }, Cmd.none )
 
                 Err err ->
-                    ( Fail <| httpErrToJsonErr err, Cmd.none )
+                    ( { model
+                        | modelState =
+                            Fail <|
+                                httpErrToJsonErr err
+                      }
+                    , Cmd.none
+                    )
 
         FilesRequested ->
-            ( Uploading 0
+            ( { model | modelState = Uploading 0 }
             , Select.files [ "*" ] FilesSelected
             )
 
@@ -137,9 +226,30 @@ view model =
             , centerY
             , spacing 10
             ]
-            (case model of
+            (case model.modelState of
                 Waiting ->
                     viewInit
+
+                Configuring mStats ->
+                    case mStats of
+                        Nothing ->
+                            viewConfiguration model.modelConfig mStats
+
+                        Just stats ->
+                            [ column
+                                [ centerX
+                                , centerY
+                                , spacing 10
+                                , inFront <|
+                                    column
+                                        [ centerX
+                                        , centerY
+                                        , spacing 10
+                                        ]
+                                        (viewConfiguration model.modelConfig mStats)
+                                ]
+                                (viewStats stats model.modelConfig model.disabledStats 0.1)
+                            ]
 
                 Fail err ->
                     viewFail err
@@ -148,11 +258,11 @@ view model =
                     viewProgress pct
 
                 Done stats ->
-                    viewStats stats
+                    viewStats stats model.modelConfig model.disabledStats 1
             )
 
 
-viewStats stats =
+viewStats stats modelCfg disabledStats alphaVal =
     let
         player0 =
             Maybe.withDefault defaultPlayer <| Array.get 0 stats.players
@@ -166,215 +276,187 @@ viewStats stats =
         player1Wins =
             getPlayerWinCount stats.playerStats 1
     in
-    [ image
-        [ centerX
-        , centerY
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick Reset
-        , scale 1.25
-        , moveDown 10
-        , onLeft <|
-            (player0Wins
-                |> String.fromInt
-                |> text
-                |> el
-                    [ Font.color white
-                    , Font.extraBold
-                    , scale 1.5
-                    , moveLeft 35
-                    , moveDown 30
-                    ]
-            )
-        , onRight <|
-            (player1Wins
-                |> String.fromInt
-                |> text
-                |> el
-                    [ Font.color white
-                    , Font.extraBold
-                    , scale 1.5
-                    , moveRight 35
-                    , moveDown 30
-                    ]
-            )
+    [ column
+        [ spacing <| 10 + disabledStats * 5
+        , alpha alphaVal
         ]
-        { src = "rsrc/Characters/Saga Icons/" ++ stats.sagaIcon ++ "G.png"
-        , description = "Logo for set winner"
-        }
-    , row
-        [ centerX
-        , spacing 10
-        , padding 10
-        ]
-        [ renderStatColumn
-            [ Font.color white
-            , Font.alignRight
-            , onLeft <|
-                image
-                    [ centerX
-                    , centerY
-                    , scale 1.5
-                    , useWinnerBackgroundGradient player0Wins player1Wins
-                    , Border.rounded 5
-                    , moveRight 25
-                    , moveDown 5
-                    , padding 1
-                    , above <|
-                        el
-                            [ centerX
+        [ if modelCfg.setCountAndWinner then
+            image
+                [ centerX
+                , centerY
+                , Element.mouseOver
+                    [ Background.color cyan
+                    ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick <| Goto Waiting
+                , scale 1.25
+                , moveDown 10
+                , onLeft <|
+                    (player0Wins
+                        |> String.fromInt
+                        |> text
+                        |> el
+                            [ Font.color white
                             , Font.extraBold
-                            , scale 0.75
+                            , scale 1.5
+                            , moveLeft 35
+                            , moveDown 30
                             ]
-                            (text <| renderPlayerName player0)
-                    , onLeft <|
-                        renderSecondaries
-                            [ centerX
-                            , centerY
-                            , spacing 5
-                            , scale 0.7
-                            ]
-                            player0
-                    ]
-                    { src = charImgPath player0.character
-                    , description = renderPlayerName player0
-                    }
-            , spacing 15
-            ]
-            [ centerX
-            , Font.italic
-            , scale 0.6
-            , moveRight 80
-            , moveUp 4
-            ]
-            (listifyPlayerStat <| Array.get 0 stats.playerStats)
-        , renderStatColumn
-            [ Font.color white
-            , Font.center
-            , Font.bold
-            , Font.italic
-            , spacing 15
-            ]
-            []
-            [ Single "Total Damage"
-            , Single "Average Kill %"
-            , Single "Damage / Opening"
-            , Single "Openings / Kill"
-            , Single "Neutral Wins"
-            , Single "Counter Hits"
-            , Single "APM"
-            , Single "Favorite Move"
-            , Single "Favorite Kill Move"
-            ]
-        , renderStatColumn
-            [ Font.color white
-            , Font.alignLeft
-            , onRight <|
-                image
-                    [ centerX
-                    , centerY
-                    , scale 1.5
-                    , useWinnerBackgroundGradient player1Wins player0Wins
-                    , Border.rounded 5
-                    , moveLeft 25
-                    , moveDown 5
-                    , padding 1
-                    , above <|
-                        el
-                            [ centerX
+                    )
+                , onRight <|
+                    (player1Wins
+                        |> String.fromInt
+                        |> text
+                        |> el
+                            [ Font.color white
                             , Font.extraBold
-                            , scale 0.75
+                            , scale 1.5
+                            , moveRight 35
+                            , moveDown 30
                             ]
-                            (text <| renderPlayerName player1)
-                    , onRight <|
-                        renderSecondaries
-                            [ centerX
-                            , centerY
-                            , spacing 5
-                            , scale 0.7
-                            ]
-                            player1
+                    )
+                ]
+                (winnerSagaIcon stats.sagaIcon)
+
+          else
+            image
+                [ centerX
+                , centerY
+                , Element.mouseOver
+                    [ Background.color cyan
                     ]
-                    { src = charImgPath player1.character
-                    , description = renderPlayerName player1
-                    }
-            , spacing 15
-            ]
+                , padding 2
+                , Border.rounded 5
+                , Events.onClick <| Goto Waiting
+                , scale 1.25
+                , moveDown 10
+                ]
+                smashLogo
+        , row
             [ centerX
-            , Font.italic
-            , scale 0.6
-            , moveLeft 80
-            , moveUp 4
+            , centerY
+            , spacing 10
+            , padding 10
             ]
-            (listifyPlayerStat <| Array.get 1 stats.playerStats)
+            [ renderStatColumn modelCfg
+                [ Font.color white
+                , Font.alignRight
+                , onLeft <|
+                    image
+                        [ centerX
+                        , centerY
+                        , scale 1.5
+                        , useWinnerBackgroundGradient player0Wins player1Wins modelCfg.setCountAndWinner
+                        , Border.rounded 5
+                        , moveRight 55
+                        , moveUp <| -5 + toFloat disabledStats * 2.5
+                        , padding 1
+                        , above <|
+                            el
+                                [ centerX
+                                , Font.extraBold
+                                , scale 0.75
+                                ]
+                                (text <| renderPlayerName player0)
+                        , onLeft <|
+                            renderSecondaries
+                                [ centerX
+                                , centerY
+                                , spacing 5
+                                , scale 0.7
+                                ]
+                                player0
+                        ]
+                        { src = charImgPath player0.character
+                        , description = renderPlayerName player0
+                        }
+                , spacing 15
+                ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveRight 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| Array.get 0 stats.playerStats)
+            , renderStatColumn modelCfg
+                [ Font.color white
+                , Font.center
+                , Font.bold
+                , Font.italic
+                , spacing 15
+                , Events.onDoubleClick <| Configure (Just stats)
+                ]
+                []
+                [ Single .totalDamage "Total Damage"
+                , Single .avgKillPercent "Average Kill Percent"
+                , Single .avgDamagePerOpening "Damage / Opening"
+                , Single .avgOpeningsPerKill "Openings / Kill"
+                , Single .neutralWins "Neutral Wins"
+                , Single .counterHits "Counter Hits"
+                , Single .avgApm "APM"
+                , Single .favoriteMove "Favorite Move"
+                , Single .favoriteKillMove "Favorite Kill Move"
+                ]
+            , renderStatColumn modelCfg
+                [ Font.color white
+                , Font.alignLeft
+                , onRight <|
+                    image
+                        [ centerX
+                        , centerY
+                        , scale 1.5
+                        , useWinnerBackgroundGradient player1Wins player0Wins modelCfg.setCountAndWinner
+                        , Border.rounded 5
+                        , moveLeft 55
+                        , moveUp <| -5 + toFloat disabledStats * 2.5
+                        , padding 1
+                        , above <|
+                            el
+                                [ centerX
+                                , Font.extraBold
+                                , scale 0.75
+                                ]
+                                (text <| renderPlayerName player1)
+                        , onRight <|
+                            renderSecondaries
+                                [ centerX
+                                , centerY
+                                , spacing 5
+                                , scale 0.7
+                                ]
+                                player1
+                        ]
+                        { src = charImgPath player1.character
+                        , description = renderPlayerName player1
+                        }
+                , spacing 15
+                ]
+                [ centerX
+                , Font.italic
+                , scale 0.6
+                , moveLeft 80
+                , moveUp 4
+                ]
+                (listifyPlayerStat <| Array.get 1 stats.playerStats)
+            ]
+        , if modelCfg.stages then
+            renderStageImgsWithWinner (Array.toList stats.games) disabledStats
+
+          else
+            none
         ]
-    , renderStageImgsWithWinner (Array.toList stats.games)
     ]
 
 
 viewInit =
-    [ image
-        [ centerX
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick FilesRequested
-        , below <|
-            el
-                [ Font.color white
-                , centerX
-                ]
-                (text "Slippi Files")
+    [ row
+        [ spacing 100
+        , centerX
         ]
-        { src = "rsrc/Characters/Saga Icons/Smash.png"
-        , description = "Smash Logo Button"
-        }
-    ]
-
-
-viewFail err =
-    let
-        msg =
-            D.errorToString err
-    in
-    [ image
-        [ centerX
-        , Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick FilesRequested
-        , below <|
-            el
-                [ Font.color white
-                , centerX
-                ]
-                (text "Slippi Files")
-        ]
-        { src = "rsrc/Characters/Saga Icons/Smash.png"
-        , description = "Smash Logo Button"
-        }
-
-    -- @TODO: format this better somehow
-    , el
-        [ Background.color white
-        , moveDown 50
-        ]
-        (text msg)
-    ]
-
-
-viewProgress pct =
-    if pct > 0 then
         [ image
-            [ centerX
-            , Element.mouseOver
+            [ Element.mouseOver
                 [ Background.color cyan
                 ]
             , padding 2
@@ -385,15 +467,256 @@ viewProgress pct =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Slippi Files")
+                    (text "Stats")
             ]
-            { src = "rsrc/Characters/Saga Icons/Smash.png"
-            , description = "Smash Logo Button"
-            }
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Configure Nothing
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Configure")
+            ]
+            smashLogo
+        ]
+    ]
+
+
+viewFail err =
+    let
+        msg =
+            D.errorToString err
+    in
+    [ row
+        [ spacing 100
+        , centerX
+        ]
+        [ image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick FilesRequested
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Stats")
+            ]
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Configure Nothing
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Configure")
+            ]
+            smashLogo
+        ]
+
+    -- @TODO: format this better somehow
+    , el
+        [ Background.color white
+        , moveDown 50
+        ]
+        (text msg)
+    ]
+
+
+viewConfiguration modelCfg mStats =
+    [ column
+        [ spacing 50
+        , Font.color white
+        ]
+        [ el
+            [ Font.extraBold
+            , scale 1.25
+            , moveUp 20
+            , centerX
+            , below <|
+                el
+                    [ centerX
+                    , moveUp 10
+                    , below <|
+                        el
+                            [ centerX
+                            , scale 0.4
+                            , Font.italic
+                            ]
+                            (text "Please choose at least 6 stats! :)")
+                    ]
+                    (text "____________________________")
+            ]
+            (text "Configure Stats")
+        , row
+            [ spacing 75
+            , centerX
+            ]
+            [ column [ spacing 10 ]
+                [ Input.checkbox []
+                    { onChange = Toggle TotalDamageF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.totalDamage
+                    , label =
+                        Input.labelRight []
+                            (text "Total Damage")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle NeutralWinsF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.neutralWins
+                    , label =
+                        Input.labelRight []
+                            (text "Neutral Wins")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle CounterHitsF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.counterHits
+                    , label =
+                        Input.labelRight []
+                            (text "Counter Hits")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle FavoriteMoveF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.favoriteMove
+                    , label =
+                        Input.labelRight []
+                            (text "Favorite Move")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle FavoriteKillMoveF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.favoriteKillMove
+                    , label =
+                        Input.labelRight []
+                            (text "Favorite Kill Move")
+                    }
+                ]
+            , column [ spacing 15 ]
+                [ Input.checkbox []
+                    { onChange = Toggle AvgOpeningsPerKillF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgOpeningsPerKill
+                    , label =
+                        Input.labelRight []
+                            (text "Openings / Kill")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgDamagePerOpeningF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgDamagePerOpening
+                    , label =
+                        Input.labelRight []
+                            (text "Damage / Opening")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgKillPercentF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgKillPercent
+                    , label =
+                        Input.labelRight []
+                            (text "Average Kill Percent")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle AvgApmF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.avgApm
+                    , label =
+                        Input.labelRight []
+                            (text "APM")
+                    }
+                ]
+            ]
+        , el
+            [ Font.extraBold
+            , scale 1.25
+            , moveUp 20
+            , centerX
+            , below <|
+                el
+                    [ centerX
+                    , moveDown 2
+                    , scale 0.5
+                    , Font.italic
+                    ]
+                    (text "General Layout Stats")
+            ]
+            (text "____________________________")
+        , row
+            [ spacing 50
+            , centerX
+            ]
+            [ Input.checkbox []
+                { onChange = Toggle SetCountAndWinnerF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.setCountAndWinner
+                , label =
+                    Input.labelRight []
+                        (text "Set Count + Winner")
+                }
+            , Input.checkbox []
+                { onChange = Toggle StagesF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.stages
+                , label =
+                    Input.labelRight []
+                        (text "Stages + Stocks")
+                }
+            ]
+        , image
+            [ centerX
+            , Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <|
+                Goto
+                    (case mStats of
+                        Nothing ->
+                            Waiting
+
+                        Just stats ->
+                            Done stats
+                    )
+            , below <|
+                el [ centerX ]
+                    (text "Save")
+            ]
+            smashLogo
+        ]
+    ]
+
+
+viewProgress pct =
+    if pct > 0 then
+        [ el
+            [ Font.color white
+            , Font.italic
+            , centerX
+            ]
+            (text "Computing stats...")
         , el
             [ Font.color white
             , centerX
-            , moveDown 50
             ]
             (text (String.fromInt (round (100 * pct)) ++ "%"))
         ]
@@ -431,20 +754,20 @@ listifyPlayerStat mStat =
             []
 
         Just stat ->
-            [ Single << String.fromInt << round <| stat.totalDamage
-            , Single << handlePossibleZero <| stat.avgs.avgKillPercent
-            , Single << String.fromInt << round <| stat.avgs.avgDamagePerOpening
-            , Single << handlePossibleZero <| stat.avgs.avgOpeningsPerKill
-            , Single << String.fromInt <| stat.neutralWins
-            , Single << String.fromInt <| stat.counterHits
-            , Single << String.fromInt << round <| stat.avgs.avgApm
-            , Dub ( stat.favoriteMove.moveName, String.fromInt stat.favoriteMove.timesUsed )
-            , Dub ( stat.favoriteKillMove.moveName, String.fromInt stat.favoriteKillMove.timesUsed )
+            [ Single .totalDamage << String.fromInt << round <| stat.totalDamage
+            , Single .avgKillPercent << handlePossibleZero <| stat.avgKillPercent
+            , Single .avgDamagePerOpening << String.fromInt << round <| stat.avgDamagePerOpening
+            , Single .avgOpeningsPerKill << handlePossibleZero <| stat.avgOpeningsPerKill
+            , Single .neutralWins << String.fromInt <| stat.neutralWins
+            , Single .counterHits << String.fromInt <| stat.counterHits
+            , Single .avgApm << String.fromInt << round <| stat.avgApm
+            , Dub .favoriteMove stat.favoriteMove.moveName (String.fromInt stat.favoriteMove.timesUsed)
+            , Dub .favoriteKillMove stat.favoriteKillMove.moveName (String.fromInt stat.favoriteKillMove.timesUsed)
             ]
 
 
-useWinnerBackgroundGradient playerWins opponentWins =
-    if playerWins > opponentWins then
+useWinnerBackgroundGradient playerWins opponentWins showWinner =
+    if playerWins > opponentWins && showWinner then
         Background.gradient
             { angle = 3.14
             , steps = [ black, goldenYellow ]
@@ -457,14 +780,14 @@ useWinnerBackgroundGradient playerWins opponentWins =
             }
 
 
-renderStageImgsWithWinner games =
+renderStageImgsWithWinner games disabledStats =
     wrappedRow
         [ Background.color black
         , Border.rounded 5
         , spacing 15
         , padding 10
         , centerX
-        , moveDown 25
+        , moveDown <| 25 + (toFloat disabledStats * 5)
         ]
     <|
         List.indexedMap renderStageAndWinnerIcon games
@@ -523,19 +846,40 @@ renderStageAndWinnerIcon gameNum gameInfo =
         }
 
 
-renderStatColumn styles subStyles strings =
+renderStatColumn statsConfig styles subStyles cellVals =
+    let
+        toggledCellVals =
+            List.concatMap
+                (\cellVal ->
+                    case cellVal of
+                        Single f _ ->
+                            if f statsConfig then
+                                [ cellVal ]
+
+                            else
+                                []
+
+                        Dub f _ _ ->
+                            if f statsConfig then
+                                [ cellVal ]
+
+                            else
+                                []
+                )
+                cellVals
+    in
     Element.indexedTable styles
-        { data = strings
+        { data = toggledCellVals
         , columns =
             [ { header = text ""
-              , width = px 175
+              , width = px 200
               , view =
                     \_ x ->
                         case x of
-                            Single l ->
+                            Single _ l ->
                                 el [] <| text l
 
-                            Dub ( l, sub ) ->
+                            Dub _ l sub ->
                                 el
                                     [ below <|
                                         el subStyles
@@ -575,66 +919,6 @@ renderSecondaries styles player =
 
 
 
--- @TODO: maybe move these all the node side
-
-
-charImgPath : Character -> String
-charImgPath character =
-    "rsrc/Characters/Portraits/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
-
-
-charIconPath : Character -> String
-charIconPath character =
-    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ ".png"
-
-
-fourStockCharIconPath : Character -> String
-fourStockCharIconPath character =
-    "rsrc/Characters/Stock Icons/" ++ character.characterName ++ "/" ++ character.color ++ "G" ++ ".png"
-
-
-stageImgPath : String -> String
-stageImgPath stageName =
-    "rsrc/Stages/Icons/" ++ stageName ++ ".png"
-
-
-
--- elements
-
-
-black =
-    rgb255 0 0 0
-
-
-white =
-    rgb255 238 236 229
-
-
-grey =
-    rgb255 25 25 25
-
-
-lighterGrey =
-    rgb255 100 100 100
-
-
-red =
-    rgb255 255 0 0
-
-
-cyan =
-    rgb255 175 238 238
-
-
-gold =
-    rgb255 255 215 0
-
-
-goldenYellow =
-    rgb255 255 215 60
-
-
-
 -- ports
 
 
@@ -659,14 +943,30 @@ updateWithStorage msg oldModel =
 
 
 
--- codecs
+-- model codecs
 
 
-encode : Model -> E.Value
-encode model =
-    case model of
+encodeModelState : StatsStatus -> E.Value
+encodeModelState status =
+    case status of
         Waiting ->
-            E.object []
+            E.object
+                [ ( "name", E.string "Waiting" )
+                , ( "args", E.null )
+                ]
+
+        Configuring mStats ->
+            E.object
+                [ ( "name", E.string "Configuring" )
+                , ( "args"
+                  , case mStats of
+                        Nothing ->
+                            E.null
+
+                        Just stats ->
+                            statsEncoder stats
+                  )
+                ]
 
         Uploading _ ->
             E.object []
@@ -675,14 +975,62 @@ encode model =
             E.object []
 
         Done stats ->
-            statsEncoder stats
+            E.object
+                [ ( "name", E.string "Done" )
+                , ( "args", statsEncoder stats )
+                ]
 
 
-statsResponseDecoder : D.Decoder StatsResponse
-statsResponseDecoder =
-    D.map2 StatsResponse
-        (D.field "totalGames" D.int)
-        (D.field "stats" D.value)
+encode : Model -> E.Value
+encode model =
+    E.object
+        [ ( "modelState", encodeModelState model.modelState )
+        , ( "modelConfig", statsConfigEncoder model.modelConfig )
+        , ( "disabledStats", E.int model.disabledStats )
+        ]
+
+
+type alias PreModelState =
+    { name : String
+    , args : E.Value
+    }
+
+
+decodePreModelState : D.Decoder PreModelState
+decodePreModelState =
+    D.map2 PreModelState
+        (D.field "name" D.string)
+        (D.field "args" D.value)
+
+
+preModelStateToState : PreModelState -> D.Decoder StatsStatus
+preModelStateToState preModelState =
+    case preModelState.name of
+        "Waiting" ->
+            D.succeed Waiting
+
+        "Configuring" ->
+            D.field "args" (D.nullable statsDecoder)
+                |> D.andThen (Configuring >> D.succeed)
+
+        "Done" ->
+            D.field "args" statsDecoder
+                |> D.andThen (Done >> D.succeed)
+
+        other ->
+            D.fail <| "Unsupported model state: " ++ other
+
+
+decode : D.Decoder Model
+decode =
+    D.map3 Model
+        (D.field "modelState"
+            (decodePreModelState
+                |> D.andThen preModelStateToState
+            )
+        )
+        (D.field "modelConfig" statsConfigDecoder)
+        (D.field "disabledStats" D.int)
 
 
 defaultPlayer : Player
@@ -697,6 +1045,22 @@ defaultPlayer =
         }
     , characters = Array.fromList []
     , idx = 5
+    }
+
+
+defaultStatsConfig : StatsConfig
+defaultStatsConfig =
+    { totalDamage = True
+    , neutralWins = True
+    , counterHits = True
+    , avgApm = True
+    , avgOpeningsPerKill = True
+    , avgDamagePerOpening = True
+    , avgKillPercent = True
+    , favoriteMove = True
+    , favoriteKillMove = True
+    , setCountAndWinner = True
+    , stages = True
     }
 
 
@@ -715,12 +1079,15 @@ subscriptions model =
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue statsDecoder flags of
+    ( case D.decodeValue decode flags of
         Err _ ->
-            Waiting
+            { modelState = Waiting
+            , modelConfig = defaultStatsConfig
+            , disabledStats = 0
+            }
 
-        Ok stats ->
-            Done stats
+        Ok model ->
+            model
     , Cmd.none
     )
 
