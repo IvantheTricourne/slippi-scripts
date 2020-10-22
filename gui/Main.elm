@@ -86,6 +86,21 @@ toggleField field val statsCfg =
         FavoriteKillMoveF ->
             { statsCfg | favoriteKillMove = val }
 
+        ShortestStockF ->
+            { statsCfg | shortestStock = val }
+
+        LongestStockF ->
+            { statsCfg | longestStock = val }
+
+        EarliestKillF ->
+            { statsCfg | earliestKill = val }
+
+        LatestKillF ->
+            { statsCfg | latestKill = val }
+
+        LongestComboF ->
+            { statsCfg | longestCombo = val }
+
         SetCountAndWinnerF ->
             { statsCfg | setCountAndWinner = val }
 
@@ -1147,6 +1162,11 @@ defaultStatsConfig =
     , avgKillPercent = True
     , favoriteMove = True
     , favoriteKillMove = True
+    , shortestStock = False
+    , longestStock = True
+    , earliestKill = True
+    , latestKill = False
+    , longestCombo = True
     , setCountAndWinner = True
     , stages = True
     }

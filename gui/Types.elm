@@ -26,6 +26,11 @@ type StatsConfigField
     | AvgKillPercentF
     | FavoriteMoveF
     | FavoriteKillMoveF
+    | ShortestStockF
+    | LongestStockF
+    | EarliestKillF
+    | LatestKillF
+    | LongestComboF
     | SetCountAndWinnerF
     | StagesF
 
@@ -40,6 +45,11 @@ type alias StatsConfig =
     , avgKillPercent : Bool
     , favoriteMove : Bool
     , favoriteKillMove : Bool
+    , shortestStock : Bool
+    , longestStock : Bool
+    , earliestKill : Bool
+    , latestKill : Bool
+    , longestCombo : Bool
     , setCountAndWinner : Bool
     , stages : Bool
     }

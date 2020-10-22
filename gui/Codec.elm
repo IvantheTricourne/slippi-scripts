@@ -147,6 +147,11 @@ statsConfigDecoder =
         |> D.andMap (D.field "avgKillPercent" D.bool)
         |> D.andMap (D.field "favoriteMove" D.bool)
         |> D.andMap (D.field "favoriteKillMove" D.bool)
+        |> D.andMap (D.field "shortestStock" D.bool)
+        |> D.andMap (D.field "longestStock" D.bool)
+        |> D.andMap (D.field "earliestKill" D.bool)
+        |> D.andMap (D.field "latestKill" D.bool)
+        |> D.andMap (D.field "longestCombo" D.bool)
         |> D.andMap (D.field "setCountAndWinner" D.bool)
         |> D.andMap (D.field "stages" D.bool)
 
