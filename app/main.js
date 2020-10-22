@@ -38,7 +38,8 @@ chokidar.watch(['app/ports.js', 'app/index.html', 'app/index.js']).on('change', 
 function createWindow () {
     mainWindow = new BrowserWindow({
         width: 1024,
-        height: 768
+        height: 768,
+        resizable: false
     });
     // hide the menu bar
     mainWindow.setMenuBarVisibility(false);
