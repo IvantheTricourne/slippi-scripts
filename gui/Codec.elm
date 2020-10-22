@@ -39,6 +39,11 @@ statsConfigEncoder statsCfg =
         , ( "avgKillPercent", E.bool statsCfg.avgKillPercent )
         , ( "favoriteMove", E.bool statsCfg.favoriteMove )
         , ( "favoriteKillMove", E.bool statsCfg.favoriteKillMove )
+        , ( "shortestStock", E.bool statsCfg.shortestStock )
+        , ( "longestStock", E.bool statsCfg.longestStock )
+        , ( "earliestKill", E.bool statsCfg.earliestKill )
+        , ( "latestKill", E.bool statsCfg.latestKill )
+        , ( "longestCombo", E.bool statsCfg.longestCombo )
         , ( "setCountAndWinner", E.bool statsCfg.setCountAndWinner )
         , ( "stages", E.bool statsCfg.stages )
         ]

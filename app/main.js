@@ -37,8 +37,8 @@ chokidar.watch(['app/ports.js', 'app/index.html', 'app/index.js']).on('change', 
 // This will create our app window, no surprise there
 function createWindow () {
     mainWindow = new BrowserWindow({
-        width: 1024,
-        height: 768,
+        width: 1280,
+        height: 960,
         resizable: false
     });
     // hide the menu bar
