@@ -1,6 +1,7 @@
 module Types exposing
     ( CellValue(..)
     , Character
+    , Combo
     , FavoriteMove
     , Game
     , Player
@@ -96,12 +97,23 @@ type alias PlayerStat =
     , favoriteMove : FavoriteMove
     , favoriteKillMove : FavoriteMove
     , wins : Int
+    , shortestStock : Maybe Float
+    , longestStock : Maybe Float
+    , earliestKill : Maybe Float
+    , latestKill : Maybe Float
+    , longestCombo : Combo
     }
 
 
 type alias FavoriteMove =
     { moveName : String
     , timesUsed : Int
+    }
+
+
+type alias Combo =
+    { damage : Float
+    , moveCount : Int
     }
 
 

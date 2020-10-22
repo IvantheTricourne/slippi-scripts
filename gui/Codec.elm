@@ -19,6 +19,7 @@ module Codec exposing
 import Json.Decode as D
 import Json.Decode.Extra as D
 import Json.Encode as E
+import Json.Encode.Extra as E
 import Types exposing (..)
 
 
@@ -99,6 +100,11 @@ playerStatEncoder playerStat =
         , ( "favoriteMove", favoriteMoveEncoder playerStat.favoriteMove )
         , ( "favoriteKillMove", favoriteMoveEncoder playerStat.favoriteKillMove )
         , ( "wins", E.int playerStat.wins )
+        , ( "shortestStock", E.maybe E.float playerStat.shortestStock )
+        , ( "longestStock", E.maybe E.float playerStat.longestStock )
+        , ( "earliestKill", E.maybe E.float playerStat.earliestKill )
+        , ( "latestKill", E.maybe E.float playerStat.latestKill )
+        , ( "longestCombo", comboEncoder playerStat.longestCombo )
         ]
 
 
@@ -107,6 +113,14 @@ favoriteMoveEncoder favMov =
     E.object
         [ ( "moveName", E.string favMov.moveName )
         , ( "timesUsed", E.int favMov.timesUsed )
+        ]
+
+
+comboEncoder : Combo -> E.Value
+comboEncoder combo =
+    E.object
+        [ ( "damage", E.float combo.damage )
+        , ( "moveCount", E.int combo.moveCount )
         ]
 
 
@@ -189,6 +203,11 @@ playerStatDecoder =
         |> D.andMap (D.field "favoriteMove" favoriteMoveDecoder)
         |> D.andMap (D.field "favoriteKillMove" favoriteMoveDecoder)
         |> D.andMap (D.field "wins" D.int)
+        |> D.andMap (D.field "shortestStock" <| D.nullable D.float)
+        |> D.andMap (D.field "longestStock" <| D.nullable D.float)
+        |> D.andMap (D.field "earliestKill" <| D.nullable D.float)
+        |> D.andMap (D.field "latestKill" <| D.nullable D.float)
+        |> D.andMap (D.field "longestCombo" comboDecoder)
 
 
 favoriteMoveDecoder : D.Decoder FavoriteMove
@@ -196,3 +215,10 @@ favoriteMoveDecoder =
     D.map2 FavoriteMove
         (D.field "moveName" D.string)
         (D.field "timesUsed" D.int)
+
+
+comboDecoder : D.Decoder Combo
+comboDecoder =
+    D.map2 Combo
+        (D.field "damage" D.float)
+        (D.field "moveCount" D.int)

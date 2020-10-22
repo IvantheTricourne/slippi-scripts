@@ -282,23 +282,27 @@ function getStats(files, players = []) {
             }
         ]
     };
-    var playerTotals = [{
+    var playerTotals =
+        [{
             "apms": 0,
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
+            "combos": [],
+            "kills": [],
+            "deaths": [],
             "moves": [],
-            "killMoves": [],
-            "killPercentGameAvgs": 0
+            "killMoves": []
         },
         {
             "apms": 0,
             "openingsPerKills": 0,
             "damagePerOpenings": 0,
+            "combos": [],
+            "kills": [],
+            "deaths": [],
             "moves": [],
-            "killMoves": [],
-            "killPercentGameAvgs": 0
-        }
-    ];
+            "killMoves": []
+        }];
     _.each(files, (file, i) => {
         try {
             const game = new SlippiGame(file);
@@ -354,24 +358,32 @@ function getStats(files, players = []) {
             // track char info
             player0Chars.push(player0.character);
             player1Chars.push(player1.character);
-            // update kill percent sums
-            let playerGameKillPercentSums = [0, 0];
+            // get deaths
             _.each(game.stockComputer.stocks, (stock, i) => {
                 if (stock.deathAnimation !== null) {
                     // console.log(JSON.stringify(stock, null, 2));
                     // console.log(`${stock.opponentIndex} kills ${stock.playerIndex} @ ${stock.endPercent}`);
-                    playerGameKillPercentSums[stock.opponentIndex] += stock.endPercent;
+                    playerTotals[stock.playerIndex].deaths.push(stock.endPercent);
                 }
             });
-            // console.log(playerGameKillPercentSums);
+            // console.log(`P0 Deaths: ${playerTotals[0].deaths}`);
+            // console.log(`P1 Deaths: ${playerTotals[1].deaths}`);
             // get moves from conversions and combos
             _.each(stats.conversions, (combo, i) => {
+                // console.log(JSON.stringify(combo, null, 2));
                 let namedMoves = combo.moves.map(move => slp.moves.getMoveShortName(move.moveId));
+                let comboMovesCount = combo.moves.length;
+                let comboDamage = combo.endPercent - combo.startPercent;
+                playerTotals[combo.playerIndex].combos.push({
+                    moveCount: comboMovesCount,
+                    damage: comboDamage
+                });
                 playerTotals[combo.playerIndex].moves = playerTotals[combo.playerIndex]
                     .moves
                     .concat(namedMoves);
                 if (combo.didKill) {
                     let killingMove = namedMoves[namedMoves.length - 1];
+                    playerTotals[combo.playerIndex].kills.push(combo.endPercent);
                     playerTotals[combo.playerIndex].killMoves.push(killingMove);
                 }
             });
@@ -387,9 +399,6 @@ function getStats(files, players = []) {
                 playerTotals[i].apms += playerStats.inputsPerMinute.ratio;
                 playerTotals[i].openingsPerKills += playerStats.openingsPerKill.ratio;
                 playerTotals[i].damagePerOpenings += playerStats.damagePerOpening.ratio;
-                if (playerStats.killCount !== 0) {
-                    playerTotals[i].killPercentGameAvgs += playerGameKillPercentSums[i] / playerStats.killCount;
-                }
             });
             // update win counts
             let {
@@ -454,9 +463,30 @@ function getStats(files, players = []) {
         statsJson.playerStats[i].avgApm = totals.apms / totalGames;
         statsJson.playerStats[i].avgOpeningsPerKill = totals.openingsPerKills / totalGames;
         statsJson.playerStats[i].avgDamagePerOpening = totals.damagePerOpenings / totalGames;
-        statsJson.playerStats[i].avgKillPercent = totals.killPercentGameAvgs / totalGames;
+        if (totals.kills.length === 0) {
+            statsJson.playerStats[i].avgKillPercent = 0;
+        } else {
+            statsJson.playerStats[i].avgKillPercent = _.sum(totals.kills) / totals.kills.length;
+        }
+        // totals.killPercentGameAvgs / totalGames;
         statsJson.playerStats[i].favoriteMove = getMostUsedMove(totals.moves);
         statsJson.playerStats[i].favoriteKillMove = getMostUsedMove(totals.killMoves);
+        statsJson.playerStats[i].shortestStock = Math.min(...totals.deaths);
+        statsJson.playerStats[i].longestStock = Math.max(...totals.deaths);
+        statsJson.playerStats[i].earliestKill = Math.min(...totals.kills);
+        statsJson.playerStats[i].latestKill = Math.max(...totals.kills);
+        let longestCombo = {
+            damage: 0,
+            moveCount: 0
+        };
+        let tmp;
+        for (var x=totals.combos.length-1; x>=0; x--) {
+            tmp = totals.combos[x];
+            if (tmp.moveCount > longestCombo.moveCount) {
+                longestCombo = tmp;
+            }
+        }
+        statsJson.playerStats[i].longestCombo = longestCombo;
     });
     // console.log(JSON.stringify(statsJson, null, 2));
     return { totalGames: totalGames,
