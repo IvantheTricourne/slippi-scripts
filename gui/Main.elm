@@ -27,6 +27,7 @@ import Types exposing (..)
 
 type StatsStatus
     = Waiting
+    | Streaming
     | Configuring (Maybe Stats)
     | Uploading Float
     | Done Stats
@@ -36,6 +37,7 @@ type StatsStatus
 type alias Model =
     { modelState : StatsStatus
     , modelConfig : StatsConfig
+    , messages : List String
     , disabledStats : Int
     , stagePage : Int
     }
@@ -54,6 +56,7 @@ type Msg
     | FilesSelected File (List File)
     | GotProgress Http.Progress
     | Uploaded (Result Http.Error StatsResponse)
+    | Recv String
 
 
 toggleField : StatsConfigField -> Bool -> StatsConfig -> StatsConfig
@@ -193,6 +196,11 @@ update msg model =
                 }
             )
 
+        Recv message ->
+            ( { model | messages = model.messages ++ [ message ] }
+            , Cmd.none
+            )
+
 
 httpErrToJsonErr : Http.Error -> D.Error
 httpErrToJsonErr httpErr =
@@ -238,7 +246,10 @@ view model =
             ]
             (case model.modelState of
                 Waiting ->
-                    viewInit
+                    viewInit model
+
+                Streaming ->
+                    viewStream model
 
                 Configuring mStats ->
                     case mStats of
@@ -265,7 +276,7 @@ view model =
                     viewFail err
 
                 Uploading pct ->
-                    viewProgress pct
+                    viewProgress model pct
 
                 Done stats ->
                     viewStats stats model.modelConfig model.disabledStats model.stagePage 1
@@ -460,7 +471,24 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
     ]
 
 
-viewInit =
+viewStream model =
+    [ row
+        [ spacing 100
+        , centerX
+        ]
+        [ el
+            [ Font.color white
+            , Element.mouseOver
+                [ Font.color red
+                ]
+            , Events.onClick <| Goto Waiting
+            ]
+            (text <| String.join " " model.messages)
+        ]
+    ]
+
+
+viewInit model =
     [ row
         [ spacing 100
         , centerX
@@ -477,7 +505,22 @@ viewInit =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Stats")
+                    (text "Files")
+            ]
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Goto Streaming
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Stream")
             ]
             smashLogo
         , image
@@ -514,13 +557,28 @@ viewFail err =
                 ]
             , padding 2
             , Border.rounded 5
+            , Events.onClick <| Goto Streaming
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Files")
+            ]
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
             , Events.onClick FilesRequested
             , below <|
                 el
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Stats")
+                    (text "Stream")
             ]
             smashLogo
         , image
@@ -716,7 +774,7 @@ viewConfiguration modelCfg mStats =
     ]
 
 
-viewProgress pct =
+viewProgress model pct =
     if pct > 0 then
         [ el
             [ Font.color white
@@ -732,7 +790,7 @@ viewProgress pct =
         ]
 
     else
-        viewInit
+        viewInit model
 
 
 getPlayerWinCount : Array.Array PlayerStat -> Int -> Int
@@ -1011,6 +1069,9 @@ renderSecondaries styles player =
 port setStorage : E.Value -> Cmd msg
 
 
+port messageReceiver : (String -> msg) -> Sub msg
+
+
 updateWithStorage : Msg -> Model -> ( Model, Cmd Msg )
 updateWithStorage msg oldModel =
     let
@@ -1038,6 +1099,12 @@ encodeModelState status =
         Waiting ->
             E.object
                 [ ( "name", E.string "Waiting" )
+                , ( "args", E.null )
+                ]
+
+        Streaming ->
+            E.object
+                [ ( "name", E.string "Streaming" )
                 , ( "args", E.null )
                 ]
 
@@ -1072,6 +1139,7 @@ encode model =
     E.object
         [ ( "modelState", encodeModelState model.modelState )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
+        , ( "messagse", E.list E.string model.messages )
         , ( "disabledStats", E.int model.disabledStats )
         , ( "stagePage", E.int model.stagePage )
         ]
@@ -1096,6 +1164,9 @@ preModelStateToState preModelState =
         "Waiting" ->
             D.succeed Waiting
 
+        "Streaming" ->
+            D.succeed Streaming
+
         "Configuring" ->
             D.field "args" (D.nullable statsDecoder)
                 |> D.andThen (Configuring >> D.succeed)
@@ -1110,13 +1181,14 @@ preModelStateToState preModelState =
 
 decode : D.Decoder Model
 decode =
-    D.map4 Model
+    D.map5 Model
         (D.field "modelState"
             (decodePreModelState
                 |> D.andThen preModelStateToState
             )
         )
         (D.field "modelConfig" statsConfigDecoder)
+        (D.field "messages" <| D.list D.string)
         (D.field "disabledStats" D.int)
         (D.field "stagePage" D.int)
 
@@ -1158,10 +1230,11 @@ defaultStatsConfig =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Http.track "upload" GotProgress
+    messageReceiver Recv
 
 
 
+-- Http.track "upload" GotProgress
 -- main
 
 
@@ -1171,6 +1244,7 @@ init flags =
         Err _ ->
             { modelState = Waiting
             , modelConfig = defaultStatsConfig
+            , messages = []
             , disabledStats = 0
             , stagePage = 0
             }
