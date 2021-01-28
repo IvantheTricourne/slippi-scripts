@@ -197,7 +197,7 @@ update msg model =
             )
 
         Recv message ->
-            ( { model | messages = model.messages ++ [ message ] }
+            ( { model | messages = [ message ] }
             , Cmd.none
             )
 
