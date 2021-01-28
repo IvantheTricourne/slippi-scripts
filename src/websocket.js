@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const { SlpFolderStream, SlpRealTime } = require("@vinceau/slp-realtime");
-
+const OBSWebSocket = require('obs-websocket-js'); // npm install obs-websocket-js
 const wss = new WebSocket.Server({ port: 8081 });
 // @TODO make this configurable
 const slpLiveFolderPath = "/home/carl/Slippi/";
@@ -29,7 +29,25 @@ function showPlayerInfo(playerInfo) {
 ${showStocks(playerInfo[1].stocks)} - ${showStocks(playerInfo[2].stocks)}
 `;
 }
-// setup websocket
+// setup obs websocket
+const obs = new OBSWebSocket();
+obs.connect({
+    // @TODO: make this configurable
+    address: "localhost:4444",
+    password: "rubielle"
+}).then(() => {
+    console.log("Connected to OBS.");
+}).catch(err => { // Promise convention dicates you have a catch on every chain.
+    console.log(err);
+});
+obs.on('SwitchScenes', data => {
+    console.log(`New Active Scene: ${data.sceneName}`);
+});
+obs.on('error', err => {
+    console.error('Unable to connect to obs:', err);
+});
+
+// setup websocket server
 wss.on('connection', ws => {
     ws.on('message', message => {
         console.log(message);
@@ -40,22 +58,27 @@ wss.on('connection', ws => {
     realtime.game.start$.subscribe(() => {
         console.log(`Detected a new game in ${stream.latestFile()}`);
         playerInfo = newPlayerInfo();
-        ws.send('NEW GAME');
+        obs.send('SetCurrentScene', {
+            'scene-name': 'gaming test'
+        });
     });
     realtime.stock.percentChange$.subscribe((payload) => {
         const player = payload.playerIndex + 1;
         playerInfo[player].percent = payload.percent.toFixed(0);
-        console.log(`player ${player} percent: ${payload.percent.toFixed(0)}`);
+        // console.log(`player ${player} percent: ${payload.percent.toFixed(0)}`);
         ws.send(showPlayerInfo(playerInfo));
     });
     realtime.stock.countChange$.subscribe((payload) => {
         const player = payload.playerIndex + 1;
         playerInfo[player].stocks = payload.stocksRemaining;
-        console.log(`player ${player} stocks: ${payload.stocksRemaining}`);
+        // console.log(`player ${player} stocks: ${payload.stocksRemaining}`);
         ws.send(showPlayerInfo(playerInfo));
     });
     realtime.game.end$.subscribe(() => {
-        ws.send('GAME END');
+        console.log('Game ended!');
+        obs.send('SetCurrentScene', {
+            'scene-name': 'live coding 4:3'
+        });
     });
 });
 // Start monitoring the folder for changes

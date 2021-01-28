@@ -12,6 +12,7 @@
         "elm-live": "^4.0.2",
         "formidable": "^1.2.2",
         "lodash": "^4.17.19",
+        "obs-websocket-js": "^4.0.2",
         "rxjs": "^6.6.3"
     },
     "devDependencies": {
