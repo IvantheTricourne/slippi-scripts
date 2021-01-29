@@ -27,3 +27,7 @@ ws.onopen = function(event) {
 app.ports.setStorage.subscribe(function(state) {
     localStorage.setItem('myapp-model', JSON.stringify(state));
 });
+
+app.ports.log.subscribe(function(str) {
+    console.log(str);
+});

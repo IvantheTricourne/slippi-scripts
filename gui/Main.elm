@@ -18,6 +18,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Maybe
 import Resources exposing (..)
+import Stream exposing (..)
 import Types exposing (..)
 
 
@@ -37,7 +38,8 @@ type StatsStatus
 type alias Model =
     { modelState : StatsStatus
     , modelConfig : StatsConfig
-    , messages : List String
+    , streamState : StreamState
+    , lastMessage : Maybe Message
     , disabledStats : Int
     , stagePage : Int
     }
@@ -197,9 +199,19 @@ update msg model =
             )
 
         Recv message ->
-            ( { model | messages = [ message ] }
-            , Cmd.none
-            )
+            case D.decodeString messageDecoder message of
+                Err err ->
+                    ( model
+                    , log (D.errorToString err)
+                    )
+
+                Ok newMsg ->
+                    ( { model
+                        | lastMessage = Just newMsg
+                        , streamState = updateStateWithMessage model.streamState newMsg
+                      }
+                    , Cmd.none
+                    )
 
 
 httpErrToJsonErr : Http.Error -> D.Error
@@ -483,7 +495,7 @@ viewStream model =
                 ]
             , Events.onClick <| Goto Waiting
             ]
-            (text <| String.join " " model.messages)
+            (text <| "wip")
         ]
     ]
 
@@ -1069,6 +1081,9 @@ renderSecondaries styles player =
 port setStorage : E.Value -> Cmd msg
 
 
+port log : String -> Cmd msg
+
+
 port messageReceiver : (String -> msg) -> Sub msg
 
 
@@ -1139,7 +1154,15 @@ encode model =
     E.object
         [ ( "modelState", encodeModelState model.modelState )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
-        , ( "messagse", E.list E.string model.messages )
+        , ( "streamState", streamStateEncoder model.streamState )
+        , ( "lastMessage"
+          , case model.lastMessage of
+                Nothing ->
+                    E.null
+
+                Just msg ->
+                    messageEncoder msg
+          )
         , ( "disabledStats", E.int model.disabledStats )
         , ( "stagePage", E.int model.stagePage )
         ]
@@ -1181,14 +1204,15 @@ preModelStateToState preModelState =
 
 decode : D.Decoder Model
 decode =
-    D.map5 Model
+    D.map6 Model
         (D.field "modelState"
             (decodePreModelState
                 |> D.andThen preModelStateToState
             )
         )
         (D.field "modelConfig" statsConfigDecoder)
-        (D.field "messages" <| D.list D.string)
+        (D.field "streamState" streamStateDecoder)
+        (D.field "lastMessage" <| D.nullable messageDecoder)
         (D.field "disabledStats" D.int)
         (D.field "stagePage" D.int)
 
@@ -1240,19 +1264,24 @@ subscriptions model =
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue decode flags of
-        Err _ ->
-            { modelState = Waiting
-            , modelConfig = defaultStatsConfig
-            , messages = []
-            , disabledStats = 0
-            , stagePage = 0
-            }
+    case D.decodeValue decode flags of
+        Err err ->
+            ( { modelState = Waiting
+              , modelConfig = defaultStatsConfig
+              , streamState =
+                    { players = Array.empty
+                    , endGames = []
+                    , currentPcts = Array.empty
+                    }
+              , lastMessage = Nothing
+              , disabledStats = 0
+              , stagePage = 0
+              }
+            , log (D.errorToString err)
+            )
 
         Ok model ->
-            model
-    , Cmd.none
-    )
+            ( model, Cmd.none )
 
 
 main =

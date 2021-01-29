@@ -5,6 +5,8 @@ module Codec exposing
     , favoriteMoveEncoder
     , gameDecoder
     , gameEncoder
+    , messageDecoder
+    , messageEncoder
     , playerDecoder
     , playerEncoder
     , playerStatDecoder
@@ -14,6 +16,8 @@ module Codec exposing
     , statsDecoder
     , statsEncoder
     , statsResponseDecoder
+    , streamStateDecoder
+    , streamStateEncoder
     )
 
 import Json.Decode as D
@@ -33,6 +37,15 @@ maybe def f mVal =
 
         Just val ->
             f val
+
+
+streamStateEncoder : StreamState -> E.Value
+streamStateEncoder ss =
+    E.object
+        [ ( "players", E.array playerTypeEncoder ss.players )
+        , ( "endGames", E.list endGamePayloadEncoder ss.endGames )
+        , ( "currentPcts", E.array E.float ss.currentPcts )
+        ]
 
 
 messageEncoder : Message -> E.Value
@@ -200,6 +213,14 @@ favoriteMoveEncoder favMov =
 
 
 -- decoders
+
+
+streamStateDecoder : D.Decoder StreamState
+streamStateDecoder =
+    D.map3 StreamState
+        (D.field "players" <| D.array playerTypeDecoder)
+        (D.field "endGames" <| D.list endGamePayloadDecoder)
+        (D.field "currentPcts" <| D.array D.float)
 
 
 messageRecordDecoder : D.Decoder MessageRecord

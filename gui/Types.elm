@@ -16,10 +16,18 @@ module Types exposing
     , StatsConfigField(..)
     , StatsResponse
     , StockChangePayload
+    , StreamState
     )
 
 import Array exposing (Array)
 import Json.Decode exposing (Value)
+
+
+type alias StreamState =
+    { players : Array PlayerType
+    , endGames : List EndGamePayload
+    , currentPcts : Array Float
+    }
 
 
 type alias MessageRecord =
