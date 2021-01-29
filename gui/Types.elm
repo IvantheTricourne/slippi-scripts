@@ -1,18 +1,79 @@
 module Types exposing
     ( CellValue(..)
     , Character
+    , EndGamePayload
     , FavoriteMove
     , Game
+    , Message(..)
+    , MessageRecord
+    , NewGamePayload
+    , PercentChangePayload
     , Player
     , PlayerStat
+    , PlayerType
     , Stats
     , StatsConfig
     , StatsConfigField(..)
     , StatsResponse
+    , StockChangePayload
     )
 
 import Array exposing (Array)
 import Json.Decode exposing (Value)
+
+
+type alias MessageRecord =
+    { msgRecType : String
+    , msgRecPayload : Value
+    }
+
+
+type Message
+    = NewGame NewGamePayload
+    | EndGame EndGamePayload
+    | PercentChange PercentChangePayload
+    | StockChange StockChangePayload
+
+
+type alias NewGamePayload =
+    { slpVersion : Maybe String
+    , isTeams : Maybe Bool
+    , isPAL : Maybe Bool
+    , stageId : Maybe Int
+    , players : List PlayerType
+    }
+
+
+type alias PlayerType =
+    { playerIndex : Int
+    , playerPort : Int
+    , characterId : Maybe Int
+    , characterColor : Maybe Int
+    , startStocks : Maybe Int
+    , playerType : Maybe Int
+    , teamId : Maybe Int
+    , controllerFix : Maybe String
+    , nametag : Maybe String
+    }
+
+
+type alias EndGamePayload =
+    { gameEndMethod : Maybe Int
+    , lrasInitiatorIndex : Maybe Int
+    , winnerPlayerIndex : Int
+    }
+
+
+type alias PercentChangePayload =
+    { playerIndex : Int
+    , percent : Float
+    }
+
+
+type alias StockChangePayload =
+    { playerIndex : Int
+    , stocksRemaining : Int
+    }
 
 
 type StatsConfigField
