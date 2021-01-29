@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
 const { SlpFolderStream, SlpRealTime } = require("@vinceau/slp-realtime");
 const OBSWebSocket = require('obs-websocket-js'); // npm install obs-websocket-js
+const slp = require('@slippi/slippi-js');
 const wss = new WebSocket.Server({ port: 8081 });
 // @TODO make this configurable
 const slpLiveFolderPath = "/home/carl/Slippi/";
@@ -13,11 +14,15 @@ realtime.setStream(stream);
 // some helpers
 function newPlayerInfo() {
     return {
-        1: { stocks: 4,
-             percent: 0
+        1: { percent: 0,
+             stocks: null,
+             character: null,
+             nametag: null
            },
-        2: { stocks: 4,
-             percent: 0
+        2: { percent: 0,
+             stocks: null,
+             character: null,
+             nametag: null
            }
     };
 }
@@ -25,7 +30,7 @@ function showStocks(stockCount) {
     return "o".repeat(stockCount);
 }
 function showPlayerInfo(playerInfo) {
-    return `P1 ${playerInfo[1].percent}% - P2 ${playerInfo[2].percent}%\n
+    return `P1 (${playerInfo[1].character.color} ${playerInfo[1].character.characterName}) ${playerInfo[1].percent}% - P2 (${playerInfo[2].character.color} ${playerInfo[2].character.characterName}) ${playerInfo[2].percent}%\n
 ${showStocks(playerInfo[1].stocks)} - ${showStocks(playerInfo[2].stocks)}
 `;
 }
@@ -55,11 +60,23 @@ wss.on('connection', ws => {
     ws.send(`Watching from ${slpLiveFolderPath}`);
     let playerInfo = newPlayerInfo();
     // realtime stuff
-    realtime.game.start$.subscribe(() => {
+    realtime.game.start$.subscribe((payload) => {
         console.log(`Detected a new game in ${stream.latestFile()}`);
         playerInfo = newPlayerInfo();
+        playerInfo[1].stocks = payload.players[0].startStocks;
+        playerInfo[1].character = {
+            characterName: slp.characters.getCharacterName(payload.players[0].characterId),
+            color: slp.characters.getCharacterColorName(payload.players[0].characterId, payload.players[1].characterColor)
+        };
+        playerInfo[1].nametag = payload.players[0].nametag;
+        playerInfo[2].stocks = payload.players[1].startStocks;
+        playerInfo[2].character = {
+            characterName: slp.characters.getCharacterName(payload.players[1].characterId),
+            color: slp.characters.getCharacterColorName(payload.players[1].characterId, payload.players[1].characterColor)
+        };
+        playerInfo[2].nametag = payload.players[1].nametag;
         obs.send('SetCurrentScene', {
-            'scene-name': 'gaming test'
+            'scene-name': 'gaming'
         });
     });
     realtime.stock.percentChange$.subscribe((payload) => {
@@ -74,10 +91,16 @@ wss.on('connection', ws => {
         // console.log(`player ${player} stocks: ${payload.stocksRemaining}`);
         ws.send(showPlayerInfo(playerInfo));
     });
-    realtime.game.end$.subscribe(() => {
+    realtime.game.end$.subscribe((payload) => {
         console.log('Game ended!');
+        let winnerIdx = payload.winnerPlayerIndex + 1;
+        if (playerInfo[winnerIdx].nametag !== "") {
+            ws.send(`${playerInfo[winnerIdx].nametag} wins!`);
+        } else {
+            ws.send(`Player ${winnerIdx} wins!`);
+        }
         obs.send('SetCurrentScene', {
-            'scene-name': 'live coding 4:3'
+            'scene-name': 'waiting'
         });
     });
 });
