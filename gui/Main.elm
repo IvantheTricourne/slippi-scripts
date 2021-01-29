@@ -484,19 +484,37 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
 
 
 viewStream model =
+    let
+        showPlayerStocks player =
+            el
+                [ Font.color white
+                , Element.mouseOver
+                    [ Font.color red
+                    ]
+                , Events.onClick <| Goto Waiting
+                ]
+                (text <| Maybe.withDefault "?" (Maybe.map String.fromInt player.startStocks))
+
+        showPlayerPcts pct =
+            el
+                [ Font.color white
+                , Element.mouseOver
+                    [ Font.color red
+                    ]
+                , Events.onClick <| Goto Waiting
+                ]
+                (text << String.fromInt << round <| pct)
+    in
     [ row
         [ spacing 100
         , centerX
         ]
-        [ el
-            [ Font.color white
-            , Element.mouseOver
-                [ Font.color red
-                ]
-            , Events.onClick <| Goto Waiting
-            ]
-            (text <| "wip")
+        (List.map showPlayerStocks (Array.toList model.streamState.players))
+    , row
+        [ spacing 100
+        , centerX
         ]
+        (List.map showPlayerPcts (Array.toList model.streamState.currentPcts))
     ]
 
 

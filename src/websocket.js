@@ -47,7 +47,7 @@ wss.on('connection', ws => {
     ws.on('message', message => {
         console.log(message);
     });
-    ws.send(`Watching from ${slpLiveFolderPath}`);
+    // ws.send(`Watching from ${slpLiveFolderPath}`);
     // realtime stuff
     realtime.game.start$.subscribe((payload) => {
         console.log(`Detected a new game in ${stream.latestFile()}`);
