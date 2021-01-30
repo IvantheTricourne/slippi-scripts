@@ -1,6 +1,7 @@
 module Types exposing
     ( CellValue(..)
     , Character
+    , CharacterChangePayload
     , EndGamePayload
     , FavoriteMove
     , Game
@@ -27,6 +28,7 @@ type alias StreamState =
     { players : Array PlayerType
     , endGames : List EndGamePayload
     , currentPcts : Array Float
+    , currentChars : Array Character
     }
 
 
@@ -41,6 +43,7 @@ type Message
     | EndGame EndGamePayload
     | PercentChange PercentChangePayload
     | StockChange StockChangePayload
+    | CharacterChange CharacterChangePayload
 
 
 type alias NewGamePayload =
@@ -81,6 +84,11 @@ type alias PercentChangePayload =
 type alias StockChangePayload =
     { playerIndex : Int
     , stocksRemaining : Int
+    }
+
+
+type alias CharacterChangePayload =
+    { characters : List Character
     }
 
 

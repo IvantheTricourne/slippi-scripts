@@ -37,3 +37,6 @@ updateStateWithMessage ss msg =
                     { ss
                         | players = Array.set payload.playerIndex { player | startStocks = Just payload.stocksRemaining } ss.players
                     }
+
+        CharacterChange payload ->
+            { ss | currentChars = Array.fromList payload.characters }

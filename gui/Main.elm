@@ -485,36 +485,118 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
 
 viewStream model =
     let
-        showPlayerStocks player =
-            el
-                [ Font.color white
-                , Element.mouseOver
-                    [ Font.color red
-                    ]
-                , Events.onClick <| Goto Waiting
+        showPlayerCharacterIcons player char =
+            row
+                [ centerX
+                , spacing 2
+                , scale 0.25
+                , moveUp 20
                 ]
-                (text <| Maybe.withDefault "?" (Maybe.map String.fromInt player.startStocks))
+                (List.repeat
+                    (Maybe.withDefault 0 player.startStocks)
+                    -- (image
+                    --     []
+                    --     { src = charIconPath char
+                    --     , description = ""
+                    --     }
+                    -- )
+                    (el
+                        [ Font.color <|
+                            case player.playerPort of
+                                1 ->
+                                    red
+
+                                2 ->
+                                    blue
+
+                                _ ->
+                                    white
+                        , Font.extraBold
+                        , scale 3.5
+                        , padding 5
+                        , moveUp 10
+                        ]
+                        (text ".")
+                    )
+                )
+
+        showPlayerCharacter char =
+            image
+                [ centerX
+                , scale 0.25
+                , moveUp 98
+                , Background.color grey
+                , Border.rounded 5
+                , paddingXY 25 5
+                ]
+                { src = charImgPath char
+                , description = ""
+                }
 
         showPlayerPcts pct =
             el
                 [ Font.color white
-                , Element.mouseOver
-                    [ Font.color red
-                    ]
-                , Events.onClick <| Goto Waiting
+                , onRight <|
+                    el
+                        [ scale 0.3
+                        , moveLeft 5
+                        , moveDown 4
+                        ]
+                        (text "%")
                 ]
-                (text << String.fromInt << round <| pct)
+                (text (String.fromInt << round <| pct))
+
+        showPlayerInfo moveLR playerIdx =
+            el
+                [ centerX
+                , paddingXY 5 2
+                , scale 4.0
+                , below <|
+                    Maybe.withDefault none
+                        (Maybe.map2 showPlayerCharacterIcons
+                            (Array.get playerIdx model.streamState.players)
+                            (Array.get playerIdx model.streamState.currentChars)
+                        )
+                , behindContent <|
+                    Maybe.withDefault none
+                        (Maybe.map showPlayerCharacter
+                            (Array.get playerIdx model.streamState.currentChars)
+                        )
+                , moveLR
+                , moveDown 25
+                , Font.shadow
+                    { offset = ( 0, -1 )
+                    , blur = 3
+                    , color = black
+                    }
+                ]
+                (Array.get playerIdx model.streamState.currentPcts
+                    |> Maybe.map showPlayerPcts
+                    |> Maybe.withDefault none
+                )
     in
-    [ row
-        [ spacing 100
+    [ image
+        [ Element.mouseOver
+            [ Background.color cyan
+            ]
+        , padding 2
+        , Border.rounded 5
+        , Events.onClick <| Goto Streaming
         , centerX
+        , centerY
+        , above <|
+            el
+                [ Font.color white
+                , Font.italic
+                , Font.underline
+                , centerX
+                , moveUp 3
+                ]
+                (text "The Sundaez Series")
+        , onLeft (showPlayerInfo (moveLeft 150) 0)
+        , onRight (showPlayerInfo (moveRight 150) 1)
         ]
-        (List.map showPlayerStocks (Array.toList model.streamState.players))
-    , row
-        [ spacing 100
-        , centerX
-        ]
-        (List.map showPlayerPcts (Array.toList model.streamState.currentPcts))
+        smashLogo
     ]
 
 
@@ -1290,6 +1372,7 @@ init flags =
                     { players = Array.empty
                     , endGames = []
                     , currentPcts = Array.empty
+                    , currentChars = Array.empty
                     }
               , lastMessage = Nothing
               , disabledStats = 0

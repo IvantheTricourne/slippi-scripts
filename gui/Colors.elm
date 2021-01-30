@@ -1,5 +1,6 @@
 module Colors exposing
     ( black
+    , blue
     , cyan
     , gold
     , goldenYellow
@@ -30,6 +31,10 @@ lighterGrey =
 
 red =
     rgb255 255 0 0
+
+
+blue =
+    rgb255 0 0 255
 
 
 cyan =

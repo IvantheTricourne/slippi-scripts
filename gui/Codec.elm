@@ -45,6 +45,7 @@ streamStateEncoder ss =
         [ ( "players", E.array playerTypeEncoder ss.players )
         , ( "endGames", E.list endGamePayloadEncoder ss.endGames )
         , ( "currentPcts", E.array E.float ss.currentPcts )
+        , ( "currentChars", E.array characterEncoder ss.currentChars )
         ]
 
 
@@ -73,6 +74,12 @@ messageEncoder msg =
             E.object
                 [ ( "type", E.string "StockChange" )
                 , ( "payload", stockChangePayloadEncoder payload )
+                ]
+
+        CharacterChange payload ->
+            E.object
+                [ ( "type", E.string "CharacterChange" )
+                , ( "payload", characterChangePayloadEncoder payload )
                 ]
 
 
@@ -115,7 +122,7 @@ percentChangePayloadEncoder : PercentChangePayload -> E.Value
 percentChangePayloadEncoder pc =
     E.object
         [ ( "playerIndex", E.int pc.playerIndex )
-        , ( "stocksRemaining", E.float pc.percent )
+        , ( "percent", E.float pc.percent )
         ]
 
 
@@ -124,6 +131,13 @@ stockChangePayloadEncoder sc =
     E.object
         [ ( "playerIndex", E.int sc.playerIndex )
         , ( "stocksRemaining", E.int sc.stocksRemaining )
+        ]
+
+
+characterChangePayloadEncoder : CharacterChangePayload -> E.Value
+characterChangePayloadEncoder cc =
+    E.object
+        [ ( "characters", E.list characterEncoder cc.characters )
         ]
 
 
@@ -217,10 +231,11 @@ favoriteMoveEncoder favMov =
 
 streamStateDecoder : D.Decoder StreamState
 streamStateDecoder =
-    D.map3 StreamState
+    D.map4 StreamState
         (D.field "players" <| D.array playerTypeDecoder)
         (D.field "endGames" <| D.list endGamePayloadDecoder)
         (D.field "currentPcts" <| D.array D.float)
+        (D.field "currentChars" <| D.array characterDecoder)
 
 
 messageRecordDecoder : D.Decoder MessageRecord
@@ -247,6 +262,9 @@ messageDecoder =
 
                     "StockChange" ->
                         D.field "payload" stockChangePayloadDecoder |> D.andThen (StockChange >> D.succeed)
+
+                    "CharacterChange" ->
+                        D.field "payload" characterChangePayloadDecoder |> D.andThen (CharacterChange >> D.succeed)
 
                     otherwise ->
                         D.fail ("Unknown message type: " ++ otherwise)
@@ -297,6 +315,12 @@ stockChangePayloadDecoder =
     D.map2 StockChangePayload
         (D.field "playerIndex" D.int)
         (D.field "stocksRemaining" D.int)
+
+
+characterChangePayloadDecoder : D.Decoder CharacterChangePayload
+characterChangePayloadDecoder =
+    D.map CharacterChangePayload
+        (D.field "characters" <| D.list characterDecoder)
 
 
 statsResponseDecoder : D.Decoder StatsResponse
