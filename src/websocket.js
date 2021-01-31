@@ -44,66 +44,69 @@ function makePayloadMessage(type, payload) {
 }
 // setup websocket server
 wss.on('connection', ws => {
+    ws.on('error', err => {
+        console.error('slp-realtime:', err); 
+    });
     ws.on('message', message => {
         console.log(message);
     });
     // ws.send(`Watching from ${slpLiveFolderPath}`);
-    ws.send(makePayloadMessage("NewGame", {
-        slpVersion: null,
-        isTeams: false,
-        isPAL: false,
-        stageId: 3,
-        players: [{
-                playerIndex: 0,
-                port: 1,
-                characterId: 2,
-                characterColor: 0,
-                startStocks: 4,
-                type: 0,
-                teamId: null,
-                controllerFix: null,
-                nametag: null
-            },
-            {
-                playerIndex: 1,
-                port: 2,
-                characterId: 9,
-                characterColor: 3,
-                startStocks: 4,
-                type: 0,
-                teamId: null,
-                controllerFix: null,
-                nametag: null
-            }
-        ]
-    }));
-    ws.send(makePayloadMessage("CharacterChange", {
-        characters: [{
-                characterName: slp.characters.getCharacterName(2),
-                color: slp.characters.getCharacterColorName(2, 0),
-            },
-            {
-                characterName: slp.characters.getCharacterName(9),
-                color: slp.characters.getCharacterColorName(9, 3),
-            }
-        ]
-    }));
-    ws.send(makePayloadMessage("PercentChange", {
-        playerIndex: 0,
-        percent: 420
-    }));
-    ws.send(makePayloadMessage("PercentChange", {
-        playerIndex: 1,
-        percent: 69
-    }));
-    ws.send(makePayloadMessage("StockChange", {
-        playerIndex: 0,
-        stocksRemaining: 2
-    }));
-    ws.send(makePayloadMessage("StockChange", {
-        playerIndex: 1,
-        stocksRemaining: 1
-    }));
+    // ws.send(makePayloadMessage("NewGame", {
+    //     slpVersion: null,
+    //     isTeams: false,
+    //     isPAL: false,
+    //     stageId: 3,
+    //     players: [{
+    //             playerIndex: 0,
+    //             port: 1,
+    //             characterId: 2,
+    //             characterColor: 0,
+    //             startStocks: 4,
+    //             type: 0,
+    //             teamId: null,
+    //             controllerFix: null,
+    //             nametag: null
+    //         },
+    //         {
+    //             playerIndex: 1,
+    //             port: 2,
+    //             characterId: 9,
+    //             characterColor: 3,
+    //             startStocks: 4,
+    //             type: 0,
+    //             teamId: null,
+    //             controllerFix: null,
+    //             nametag: null
+    //         }
+    //     ]
+    // }));
+    // ws.send(makePayloadMessage("CharacterChange", {
+    //     characters: [{
+    //             characterName: slp.characters.getCharacterName(2),
+    //             color: slp.characters.getCharacterColorName(2, 0),
+    //         },
+    //         {
+    //             characterName: slp.characters.getCharacterName(9),
+    //             color: slp.characters.getCharacterColorName(9, 3),
+    //         }
+    //     ]
+    // }));
+    // ws.send(makePayloadMessage("PercentChange", {
+    //     playerIndex: 0,
+    //     percent: 420
+    // }));
+    // ws.send(makePayloadMessage("PercentChange", {
+    //     playerIndex: 1,
+    //     percent: 69
+    // }));
+    // ws.send(makePayloadMessage("StockChange", {
+    //     playerIndex: 0,
+    //     stocksRemaining: 2
+    // }));
+    // ws.send(makePayloadMessage("StockChange", {
+    //     playerIndex: 1,
+    //     stocksRemaining: 1
+    // }));
 
     // realtime stuff
     realtime.game.start$.subscribe((payload) => {
@@ -112,16 +115,18 @@ wss.on('connection', ws => {
             'scene-name': 'gaming'
         });
         const msg = makePayloadMessage("NewGame", payload);
-        const charMsg = makePayloadMessage("CharacterChange",
-            _.map(payload.characters, ({
+        const charPayload = {
+            characters: _.map(payload.players, ({
                 characterId,
                 characterColor
             }) => {
                 return {
                     characterName: slp.characters.getCharacterName(characterId),
-                    color: slp.characters.getCharacterColorName(characterId, characterColor),
+                    color: slp.characters.getCharacterColorName(characterId, characterColor)
                 };
-            }));
+            })};
+
+        const charMsg = makePayloadMessage("CharacterChange", charPayload);
         console.log(msg);
         ws.send(msg);
         console.log(charMsg);

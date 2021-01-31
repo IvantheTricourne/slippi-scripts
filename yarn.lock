@@ -112,7 +112,7 @@
   dependencies:
     "@types/yargs-parser" "*"
 
-"@vinceau/slp-realtime@^3.0.4":
+"@vinceau/slp-realtime@^3.1.0":
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/@vinceau/slp-realtime/-/slp-realtime-3.1.0.tgz#3d33d8c1890e0ccd88da395adde2bf606c3bff06"
   integrity sha512-f4ZgFVlCUVvrFX1GCtsHwVkO30uiNcYVbA1dNOkCeEk5f0zQIRZ9+8Brxxm0j3lw3HLEDf22ASQ8Q4KVCIQy2g==

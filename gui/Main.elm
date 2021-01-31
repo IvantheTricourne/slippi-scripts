@@ -241,7 +241,8 @@ view : Model -> Html Msg
 view model =
     -- @TODO: clean up styles with layoutWith
     Element.layout
-        [ Background.color black
+        [ Background.color lighterGrey
+        , alpha 1.0
         , Font.family
             [ Font.external
                 { name = "Roboto"
@@ -511,8 +512,7 @@ viewStream model =
 
                                 _ ->
                                     white
-                        , Font.extraBold
-                        , scale 3.5
+                        , scale 4
                         , padding 5
                         , moveUp 10
                         ]
@@ -523,10 +523,11 @@ viewStream model =
         showPlayerCharacter char =
             image
                 [ centerX
-                , scale 0.25
+                , scale 0.175
                 , moveUp 98
-                , Background.color grey
-                , Border.rounded 5
+
+                -- , Background.color grey
+                -- , Border.rounded 5
                 , paddingXY 25 5
                 ]
                 { src = charImgPath char
@@ -534,6 +535,10 @@ viewStream model =
                 }
 
         showPlayerPcts pct =
+            let
+                roundedText =
+                    String.fromInt << round <| pct
+            in
             el
                 [ Font.color white
                 , onRight <|
@@ -541,12 +546,30 @@ viewStream model =
                         [ scale 0.3
                         , moveLeft 5
                         , moveDown 4
+                        , behindContent <|
+                            el
+                                [ Font.color black
+                                , Font.extraBold
+                                ]
+                                (text "%")
                         ]
                         (text "%")
+                , behindContent <|
+                    el
+                        [ Font.color black
+                        , Font.extraBold
+                        ]
+                        (text roundedText)
                 ]
-                (text (String.fromInt << round <| pct))
+                (text roundedText)
 
         showPlayerInfo moveLR playerIdx =
+            let
+                pctElem =
+                    Array.get playerIdx model.streamState.currentPcts
+                        |> Maybe.map showPlayerPcts
+                        |> Maybe.withDefault none
+            in
             el
                 [ centerX
                 , paddingXY 5 2
@@ -564,16 +587,14 @@ viewStream model =
                         )
                 , moveLR
                 , moveDown 25
-                , Font.shadow
-                    { offset = ( 0, -1 )
-                    , blur = 3
-                    , color = black
-                    }
+
+                -- , Font.shadow
+                --     { offset = ( 0, -1 )
+                --     , blur = 3
+                --     , color = black
+                --     }
                 ]
-                (Array.get playerIdx model.streamState.currentPcts
-                    |> Maybe.map showPlayerPcts
-                    |> Maybe.withDefault none
-                )
+                pctElem
     in
     [ image
         [ Element.mouseOver
@@ -587,8 +608,18 @@ viewStream model =
         , above <|
             el
                 [ Font.color white
+                , scale 1.2
+
+                -- , Font.extraBold
                 , Font.italic
                 , Font.underline
+                , behindContent <|
+                    el
+                        [ Font.color black
+                        , Font.extraBold
+                        , Font.underline
+                        ]
+                        (text "The Sundaez Series")
                 , centerX
                 , moveUp 3
                 ]
