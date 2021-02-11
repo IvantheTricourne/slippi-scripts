@@ -489,35 +489,34 @@ viewStream model =
         showPlayerCharacterIcons player char =
             row
                 [ centerX
-                , spacing 2
+                , spacing 5
                 , scale 0.25
-                , moveUp 20
+                , moveUp 10
+                , Font.shadow
+                    { offset = ( 1, -1 )
+                    , color = black
+                    , blur = 1.5
+                    }
+                , Font.color <|
+                    case player.playerPort of
+                        1 ->
+                            red
+
+                        2 ->
+                            blue
+
+                        3 ->
+                            green
+
+                        4 ->
+                            goldenYellow
+
+                        _ ->
+                            white
                 ]
                 (List.repeat
                     (Maybe.withDefault 0 player.startStocks)
-                    -- (image
-                    --     []
-                    --     { src = charIconPath char
-                    --     , description = ""
-                    --     }
-                    -- )
-                    (el
-                        [ Font.color <|
-                            case player.playerPort of
-                                1 ->
-                                    red
-
-                                2 ->
-                                    blue
-
-                                _ ->
-                                    white
-                        , scale 4
-                        , padding 5
-                        , moveUp 10
-                        ]
-                        (text ".")
-                    )
+                    (text "◉")
                 )
 
         showPlayerCharacter char =
@@ -525,9 +524,6 @@ viewStream model =
                 [ centerX
                 , scale 0.175
                 , moveUp 98
-
-                -- , Background.color grey
-                -- , Border.rounded 5
                 , paddingXY 25 5
                 ]
                 { src = charImgPath char
@@ -549,7 +545,8 @@ viewStream model =
                         , behindContent <|
                             el
                                 [ Font.color black
-                                , Font.extraBold
+                                , Font.heavy
+                                , scale 1.025
                                 ]
                                 (text "%")
                         ]
@@ -557,7 +554,8 @@ viewStream model =
                 , behindContent <|
                     el
                         [ Font.color black
-                        , Font.extraBold
+                        , Font.heavy
+                        , scale 1.025
                         ]
                         (text roundedText)
                 ]
@@ -587,12 +585,6 @@ viewStream model =
                         )
                 , moveLR
                 , moveDown 25
-
-                -- , Font.shadow
-                --     { offset = ( 0, -1 )
-                --     , blur = 3
-                --     , color = black
-                --     }
                 ]
                 pctElem
     in
@@ -602,30 +594,26 @@ viewStream model =
             ]
         , padding 2
         , Border.rounded 5
-        , Events.onClick <| Goto Streaming
+        , Events.onClick <| Goto Waiting
         , centerX
         , centerY
-        , above <|
+        , below <|
             el
                 [ Font.color white
                 , scale 1.2
-
-                -- , Font.extraBold
                 , Font.italic
-                , Font.underline
                 , behindContent <|
                     el
                         [ Font.color black
                         , Font.extraBold
-                        , Font.underline
+                        , scale 1.025
                         ]
                         (text "The Sundaez Series")
                 , centerX
-                , moveUp 3
                 ]
                 (text "The Sundaez Series")
-        , onLeft (showPlayerInfo (moveLeft 150) 0)
-        , onRight (showPlayerInfo (moveRight 150) 1)
+        , onLeft (showPlayerInfo (moveLeft 220) 0)
+        , onRight (showPlayerInfo (moveRight 220) 1)
         ]
         smashLogo
     ]
