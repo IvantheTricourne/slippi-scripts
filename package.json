@@ -27,7 +27,7 @@
         "watch": "yarn run build & yarn run build:watch & yarn run serve:watch & electron app/main.js true & wait",
         "test": "mocha",
         "pack": "electron-builder --dir",
-        "dist": "electron-builder"
+        "dist": "electron-builder -c.snap.publish=github"
     },
     "build": {
         "productName": "Slippi Scripts GUI",
