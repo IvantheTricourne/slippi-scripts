@@ -1,6 +1,6 @@
 {
     "name": "slippi-scripts",
-    "version": "1.0.0-BETA",
+    "version": "1.0.0",
     "description": "A collection of Slippi scripts and other vaguely useful things",
     "main": "app/main.js",
     "dependencies": {
