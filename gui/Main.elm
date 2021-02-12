@@ -52,6 +52,7 @@ type alias Model =
 type Msg
     = Goto StatsStatus
     | Configure (Maybe Stats)
+    | UpdateStream StreamState
     | UpdatePage (Int -> Int)
     | Toggle StatsConfigField Bool
     | FilesRequested
@@ -108,6 +109,11 @@ update msg model =
 
         Configure mStats ->
             ( { model | modelState = Configuring mStats }
+            , Cmd.none
+            )
+
+        UpdateStream newStreamState ->
+            ( { model | streamState = newStreamState }
             , Cmd.none
             )
 
@@ -241,7 +247,7 @@ view : Model -> Html Msg
 view model =
     -- @TODO: clean up styles with layoutWith
     Element.layout
-        [ Background.color lighterGrey
+        [ Background.color black
         , alpha 1.0
         , Font.family
             [ Font.external
@@ -490,7 +496,6 @@ viewStream model =
             row
                 [ centerX
                 , spacing 5
-                , scale 0.25
                 , moveUp 10
                 , Font.shadow
                     { offset = ( 1, -1 )
@@ -522,9 +527,6 @@ viewStream model =
         showPlayerCharacter char =
             image
                 [ centerX
-                , scale 0.175
-                , moveUp 98
-                , paddingXY 25 5
                 ]
                 { src = charImgPath char
                 , description = ""
@@ -567,55 +569,192 @@ viewStream model =
                     Array.get playerIdx model.streamState.currentPcts
                         |> Maybe.map showPlayerPcts
                         |> Maybe.withDefault none
+
+                winCountAttr =
+                    let
+                        scoreAttr =
+                            [ Background.color grey
+                            , Element.mouseOver
+                                [ Background.color white
+                                , Font.color black
+                                ]
+                            , Border.color grey
+                            , Border.rounded 6
+                            , padding 5
+                            , scale 2
+                            ]
+
+                        updateButton newSS logo =
+                            Input.button
+                                [ Background.color black
+                                , Font.color black
+                                , Element.mouseOver
+                                    [ Background.color black
+                                    , Font.color white
+                                    ]
+                                , Border.color black
+                                ]
+                                { onPress = Just (UpdateStream newSS)
+                                , label = text logo
+                                }
+                    in
+                    case playerIdx of
+                        0 ->
+                            onRight <|
+                                column
+                                    [ spacing 20
+                                    , moveUp 12
+                                    , moveRight 3
+                                    , centerX
+                                    ]
+                                    [ updateButton (updateCurrentWinsL model.streamState (\score -> score + 1)) "+"
+                                    , Input.button scoreAttr
+                                        { onPress =
+                                            Just <|
+                                                UpdateStream (updateCurrentWinsL model.streamState (always 0))
+                                        , label = text << String.fromInt <| model.streamState.currentWinsL
+                                        }
+                                    , updateButton (updateCurrentWinsL model.streamState (\score -> max 0 (score - 1))) "-"
+                                    ]
+
+                        1 ->
+                            onLeft <|
+                                column
+                                    [ spacing 20
+                                    , moveUp 12
+                                    , moveLeft 3
+                                    ]
+                                    [ updateButton (updateCurrentWinsR model.streamState (\score -> score + 1)) "+"
+                                    , Input.button
+                                        scoreAttr
+                                        { onPress =
+                                            Just <|
+                                                UpdateStream (updateCurrentWinsR model.streamState (always 0))
+                                        , label = text << String.fromInt <| model.streamState.currentWinsR
+                                        }
+                                    , updateButton (updateCurrentWinsR model.streamState (\score -> max 0 (score - 1))) "-"
+                                    ]
+
+                        _ ->
+                            above none
             in
             el
-                [ centerX
-                , paddingXY 5 2
-                , scale 4.0
+                [ Background.color grey
+                , Border.rounded 6
+                , centerX
+                , centerY
+                , paddingXY 35 200
+                , above <|
+                    Input.text
+                        [ Background.color black
+                        , Border.color black
+                        , Element.focused [ Background.color black ]
+                        , Font.center
+                        , Font.extraBold
+                        , Font.color white
+                        , moveDown 20
+                        , winCountAttr
+                        ]
+                        { onChange =
+                            \str ->
+                                case playerIdx of
+                                    0 ->
+                                        UpdateStream (updateCurrentNameL model.streamState str)
+
+                                    1 ->
+                                        UpdateStream (updateCurrentNameR model.streamState str)
+
+                                    _ ->
+                                        UpdateStream model.streamState
+                        , text =
+                            case playerIdx of
+                                0 ->
+                                    model.streamState.currentNameL
+
+                                1 ->
+                                    model.streamState.currentNameR
+
+                                _ ->
+                                    ""
+                        , placeholder = Nothing
+                        , label = Input.labelHidden ""
+                        }
                 , below <|
                     Maybe.withDefault none
                         (Maybe.map2 showPlayerCharacterIcons
                             (Array.get playerIdx model.streamState.players)
                             (Array.get playerIdx model.streamState.currentChars)
                         )
-                , behindContent <|
-                    Maybe.withDefault none
-                        (Maybe.map showPlayerCharacter
-                            (Array.get playerIdx model.streamState.currentChars)
-                        )
                 , moveLR
-                , moveDown 25
                 ]
-                pctElem
+            <|
+                Maybe.withDefault none
+                    (Maybe.map showPlayerCharacter
+                        (Array.get playerIdx model.streamState.currentChars)
+                    )
+
+        greenScreen =
+            el [] none
     in
-    [ image
-        [ Element.mouseOver
-            [ Background.color cyan
-            ]
-        , padding 2
-        , Border.rounded 5
-        , Events.onClick <| Goto Waiting
-        , centerX
-        , centerY
-        , below <|
-            el
-                [ Font.color white
-                , scale 1.2
-                , Font.italic
-                , behindContent <|
-                    el
-                        [ Font.color black
-                        , Font.extraBold
-                        , scale 1.025
-                        ]
-                        (text "The Sundaez Series")
-                , centerX
+    [ row []
+        [ showPlayerInfo (moveLeft 375) 0
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
                 ]
-                (text "The Sundaez Series")
-        , onLeft (showPlayerInfo (moveLeft 220) 0)
-        , onRight (showPlayerInfo (moveRight 220) 1)
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Goto Waiting
+            , centerX
+            , centerY
+            , below <|
+                el
+                    [ Font.color white
+                    , scale 1.2
+                    , Font.italic
+                    , behindContent <|
+                        el
+                            [ Font.color black
+                            , Font.extraBold
+                            , scale 1.025
+                            ]
+                            (text "The Sundaez Series")
+                    , centerX
+                    ]
+                    (text "The Sundaez Series")
+            ]
+            smashLogo
+        , showPlayerInfo (moveRight 375) 1
         ]
-        smashLogo
+
+    -- image
+    -- [ Element.mouseOver
+    --     [ Background.color cyan
+    --     ]
+    -- , padding 2
+    -- , Border.rounded 5
+    -- , Events.onClick <| Goto Waiting
+    -- , centerX
+    -- , centerY
+    -- , below <|
+    --     el
+    --         [ Font.color white
+    --         , scale 1.2
+    --         , Font.italic
+    --         , behindContent <|
+    --             el
+    --                 [ Font.color black
+    --                 , Font.extraBold
+    --                 , scale 1.025
+    --                 ]
+    --                 (text "The Sundaez Series")
+    --         , centerX
+    --         ]
+    --         (text "The Sundaez Series")
+    -- , onLeft (showPlayerInfo (moveLeft 375) 0)
+    -- , onRight (showPlayerInfo (moveRight 375) 1)
+    -- ]
+    -- smashLogo
     ]
 
 
@@ -688,7 +827,7 @@ viewFail err =
                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick <| Goto Streaming
+            , Events.onClick FilesRequested
             , below <|
                 el
                     [ Font.color white
@@ -703,7 +842,7 @@ viewFail err =
                 ]
             , padding 2
             , Border.rounded 5
-            , Events.onClick FilesRequested
+            , Events.onClick <| Goto Streaming
             , below <|
                 el
                     [ Font.color white
@@ -1392,6 +1531,10 @@ init flags =
                     , endGames = []
                     , currentPcts = Array.empty
                     , currentChars = Array.empty
+                    , currentWinsL = 0
+                    , currentWinsR = 0
+                    , currentNameL = "Player 1"
+                    , currentNameR = "Player 2"
                     }
               , lastMessage = Nothing
               , disabledStats = 0

@@ -46,6 +46,10 @@ streamStateEncoder ss =
         , ( "endGames", E.list endGamePayloadEncoder ss.endGames )
         , ( "currentPcts", E.array E.float ss.currentPcts )
         , ( "currentChars", E.array characterEncoder ss.currentChars )
+        , ( "currentWinsL", E.int ss.currentWinsL )
+        , ( "currentWinsR", E.int ss.currentWinsR )
+        , ( "currentNameL", E.string ss.currentNameL )
+        , ( "currentNameR", E.string ss.currentNameR )
         ]
 
 
@@ -231,11 +235,15 @@ favoriteMoveEncoder favMov =
 
 streamStateDecoder : D.Decoder StreamState
 streamStateDecoder =
-    D.map4 StreamState
+    D.map8 StreamState
         (D.field "players" <| D.array playerTypeDecoder)
         (D.field "endGames" <| D.list endGamePayloadDecoder)
         (D.field "currentPcts" <| D.array D.float)
         (D.field "currentChars" <| D.array characterDecoder)
+        (D.field "currentWinsL" D.int)
+        (D.field "currentWinsR" D.int)
+        (D.field "currentNameL" D.string)
+        (D.field "currentNameR" D.string)
 
 
 messageRecordDecoder : D.Decoder MessageRecord

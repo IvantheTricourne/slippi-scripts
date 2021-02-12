@@ -1,4 +1,10 @@
-module Stream exposing (updateStateWithMessage)
+module Stream exposing
+    ( updateCurrentNameL
+    , updateCurrentNameR
+    , updateCurrentWinsL
+    , updateCurrentWinsR
+    , updateStateWithMessage
+    )
 
 import Array
 import Types exposing (Message(..), StreamState)
@@ -40,3 +46,35 @@ updateStateWithMessage ss msg =
 
         CharacterChange payload ->
             { ss | currentChars = Array.fromList payload.characters }
+
+
+updateCurrentWinsL :
+    StreamState
+    -> (Int -> Int)
+    -> StreamState
+updateCurrentWinsL ss f =
+    { ss | currentWinsL = f ss.currentWinsL }
+
+
+updateCurrentWinsR :
+    StreamState
+    -> (Int -> Int)
+    -> StreamState
+updateCurrentWinsR ss f =
+    { ss | currentWinsR = f ss.currentWinsR }
+
+
+updateCurrentNameL :
+    StreamState
+    -> String
+    -> StreamState
+updateCurrentNameL ss string =
+    { ss | currentNameL = string }
+
+
+updateCurrentNameR :
+    StreamState
+    -> String
+    -> StreamState
+updateCurrentNameR ss string =
+    { ss | currentNameR = string }

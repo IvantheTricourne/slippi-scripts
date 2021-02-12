@@ -29,6 +29,10 @@ type alias StreamState =
     , endGames : List EndGamePayload
     , currentPcts : Array Float
     , currentChars : Array Character
+    , currentWinsL : Int
+    , currentWinsR : Int
+    , currentNameL : String
+    , currentNameR : String
     }
 
 
