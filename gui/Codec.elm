@@ -5,6 +5,8 @@ module Codec exposing
     , favoriteMoveEncoder
     , gameDecoder
     , gameEncoder
+    , messageDecoder
+    , messageEncoder
     , playerDecoder
     , playerEncoder
     , playerStatDecoder
@@ -14,6 +16,8 @@ module Codec exposing
     , statsDecoder
     , statsEncoder
     , statsResponseDecoder
+    , streamStateDecoder
+    , streamStateEncoder
     )
 
 import Json.Decode as D
@@ -24,6 +28,121 @@ import Types exposing (..)
 
 
 -- encoders
+
+
+maybe def f mVal =
+    case mVal of
+        Nothing ->
+            def
+
+        Just val ->
+            f val
+
+
+streamStateEncoder : StreamState -> E.Value
+streamStateEncoder ss =
+    E.object
+        [ ( "players", E.array playerTypeEncoder ss.players )
+        , ( "endGames", E.list endGamePayloadEncoder ss.endGames )
+        , ( "currentPcts", E.array E.float ss.currentPcts )
+        , ( "currentChars", E.array characterEncoder ss.currentChars )
+        , ( "currentWinsL", E.int ss.currentWinsL )
+        , ( "currentWinsR", E.int ss.currentWinsR )
+        , ( "currentNameL", E.string ss.currentNameL )
+        , ( "currentNameR", E.string ss.currentNameR )
+        ]
+
+
+messageEncoder : Message -> E.Value
+messageEncoder msg =
+    case msg of
+        NewGame payload ->
+            E.object
+                [ ( "type", E.string "NewGame" )
+                , ( "payload", newGamePayloadEncoder payload )
+                ]
+
+        EndGame payload ->
+            E.object
+                [ ( "type", E.string "EndGame" )
+                , ( "payload", endGamePayloadEncoder payload )
+                ]
+
+        PercentChange payload ->
+            E.object
+                [ ( "type", E.string "PercentChange" )
+                , ( "payload", percentChangePayloadEncoder payload )
+                ]
+
+        StockChange payload ->
+            E.object
+                [ ( "type", E.string "StockChange" )
+                , ( "payload", stockChangePayloadEncoder payload )
+                ]
+
+        CharacterChange payload ->
+            E.object
+                [ ( "type", E.string "CharacterChange" )
+                , ( "payload", characterChangePayloadEncoder payload )
+                ]
+
+
+newGamePayloadEncoder : NewGamePayload -> E.Value
+newGamePayloadEncoder payload =
+    E.object
+        [ ( "slpVersion", maybe E.null E.string payload.slpVersion )
+        , ( "isTeams", maybe E.null E.bool payload.isTeams )
+        , ( "isPAL", maybe E.null E.bool payload.isPAL )
+        , ( "stageId", maybe E.null E.int payload.stageId )
+        , ( "players", E.list playerTypeEncoder payload.players )
+        ]
+
+
+playerTypeEncoder : PlayerType -> E.Value
+playerTypeEncoder playerType =
+    E.object
+        [ ( "playerIndex", E.int playerType.playerIndex )
+        , ( "port", E.int playerType.playerPort )
+        , ( "characterId", maybe E.null E.int playerType.characterId )
+        , ( "characterColor", maybe E.null E.int playerType.characterColor )
+        , ( "startStocks", maybe E.null E.int playerType.startStocks )
+        , ( "type", maybe E.null E.int playerType.playerType )
+        , ( "teamId", maybe E.null E.int playerType.teamId )
+        , ( "controllerFix", maybe E.null E.string playerType.controllerFix )
+        , ( "nametag", maybe E.null E.string playerType.nametag )
+        ]
+
+
+endGamePayloadEncoder : EndGamePayload -> E.Value
+endGamePayloadEncoder payload =
+    E.object
+        [ ( "gameEndMethod", maybe E.null E.int payload.gameEndMethod )
+        , ( "lrasInitiatorIndex", maybe E.null E.int payload.lrasInitiatorIndex )
+        , ( "winnerPlayerIndex", E.int payload.winnerPlayerIndex )
+        ]
+
+
+percentChangePayloadEncoder : PercentChangePayload -> E.Value
+percentChangePayloadEncoder pc =
+    E.object
+        [ ( "playerIndex", E.int pc.playerIndex )
+        , ( "percent", E.float pc.percent )
+        ]
+
+
+stockChangePayloadEncoder : StockChangePayload -> E.Value
+stockChangePayloadEncoder sc =
+    E.object
+        [ ( "playerIndex", E.int sc.playerIndex )
+        , ( "stocksRemaining", E.int sc.stocksRemaining )
+        ]
+
+
+characterChangePayloadEncoder : CharacterChangePayload -> E.Value
+characterChangePayloadEncoder cc =
+    E.object
+        [ ( "characters", E.list characterEncoder cc.characters )
+        ]
 
 
 statsConfigEncoder : StatsConfig -> E.Value
@@ -112,6 +231,104 @@ favoriteMoveEncoder favMov =
 
 
 -- decoders
+
+
+streamStateDecoder : D.Decoder StreamState
+streamStateDecoder =
+    D.map8 StreamState
+        (D.field "players" <| D.array playerTypeDecoder)
+        (D.field "endGames" <| D.list endGamePayloadDecoder)
+        (D.field "currentPcts" <| D.array D.float)
+        (D.field "currentChars" <| D.array characterDecoder)
+        (D.field "currentWinsL" D.int)
+        (D.field "currentWinsR" D.int)
+        (D.field "currentNameL" D.string)
+        (D.field "currentNameR" D.string)
+
+
+messageRecordDecoder : D.Decoder MessageRecord
+messageRecordDecoder =
+    D.map2 MessageRecord
+        (D.field "type" D.string)
+        (D.field "payload" D.value)
+
+
+messageDecoder : D.Decoder Message
+messageDecoder =
+    messageRecordDecoder
+        |> D.andThen
+            (\msgRec ->
+                case msgRec.msgRecType of
+                    "NewGame" ->
+                        D.field "payload" newGamePayloadDecoder |> D.andThen (NewGame >> D.succeed)
+
+                    "EndGame" ->
+                        D.field "payload" endGamePayloadDecoder |> D.andThen (EndGame >> D.succeed)
+
+                    "PercentChange" ->
+                        D.field "payload" percentChangePayloadDecoder |> D.andThen (PercentChange >> D.succeed)
+
+                    "StockChange" ->
+                        D.field "payload" stockChangePayloadDecoder |> D.andThen (StockChange >> D.succeed)
+
+                    "CharacterChange" ->
+                        D.field "payload" characterChangePayloadDecoder |> D.andThen (CharacterChange >> D.succeed)
+
+                    otherwise ->
+                        D.fail ("Unknown message type: " ++ otherwise)
+            )
+
+
+newGamePayloadDecoder : D.Decoder NewGamePayload
+newGamePayloadDecoder =
+    D.map5 NewGamePayload
+        (D.field "slpVersion" <| D.nullable D.string)
+        (D.field "isTeams" <| D.nullable D.bool)
+        (D.field "isPAL" <| D.nullable D.bool)
+        (D.field "stageId" <| D.nullable D.int)
+        (D.field "players" <| D.list playerTypeDecoder)
+
+
+playerTypeDecoder : D.Decoder PlayerType
+playerTypeDecoder =
+    D.succeed PlayerType
+        |> D.andMap (D.field "playerIndex" D.int)
+        |> D.andMap (D.field "port" D.int)
+        |> D.andMap (D.field "characterId" <| D.nullable D.int)
+        |> D.andMap (D.field "characterColor" <| D.nullable D.int)
+        |> D.andMap (D.field "startStocks" <| D.nullable D.int)
+        |> D.andMap (D.field "type" <| D.nullable D.int)
+        |> D.andMap (D.field "teamId" <| D.nullable D.int)
+        |> D.andMap (D.field "controllerFix" <| D.nullable D.string)
+        |> D.andMap (D.field "nametag" <| D.nullable D.string)
+
+
+endGamePayloadDecoder : D.Decoder EndGamePayload
+endGamePayloadDecoder =
+    D.map3 EndGamePayload
+        (D.field "gameEndMethod" <| D.nullable D.int)
+        (D.field "lrasInitiatorIndex" <| D.nullable D.int)
+        (D.field "winnerPlayerIndex" D.int)
+
+
+percentChangePayloadDecoder : D.Decoder PercentChangePayload
+percentChangePayloadDecoder =
+    D.map2 PercentChangePayload
+        (D.field "playerIndex" D.int)
+        (D.field "percent" D.float)
+
+
+stockChangePayloadDecoder : D.Decoder StockChangePayload
+stockChangePayloadDecoder =
+    D.map2 StockChangePayload
+        (D.field "playerIndex" D.int)
+        (D.field "stocksRemaining" D.int)
+
+
+characterChangePayloadDecoder : D.Decoder CharacterChangePayload
+characterChangePayloadDecoder =
+    D.map CharacterChangePayload
+        (D.field "characters" <| D.list characterDecoder)
 
 
 statsResponseDecoder : D.Decoder StatsResponse

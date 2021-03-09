@@ -18,6 +18,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Maybe
 import Resources exposing (..)
+import Stream exposing (..)
 import Types exposing (..)
 
 
@@ -27,6 +28,7 @@ import Types exposing (..)
 
 type StatsStatus
     = Waiting
+    | Streaming
     | Configuring (Maybe Stats)
     | Uploading Float
     | Done Stats
@@ -36,6 +38,8 @@ type StatsStatus
 type alias Model =
     { modelState : StatsStatus
     , modelConfig : StatsConfig
+    , streamState : StreamState
+    , lastMessage : Maybe Message
     , disabledStats : Int
     , stagePage : Int
     }
@@ -48,12 +52,14 @@ type alias Model =
 type Msg
     = Goto StatsStatus
     | Configure (Maybe Stats)
+    | UpdateStream StreamState
     | UpdatePage (Int -> Int)
     | Toggle StatsConfigField Bool
     | FilesRequested
     | FilesSelected File (List File)
     | GotProgress Http.Progress
     | Uploaded (Result Http.Error StatsResponse)
+    | Recv String
 
 
 toggleField : StatsConfigField -> Bool -> StatsConfig -> StatsConfig
@@ -103,6 +109,11 @@ update msg model =
 
         Configure mStats ->
             ( { model | modelState = Configuring mStats }
+            , Cmd.none
+            )
+
+        UpdateStream newStreamState ->
+            ( { model | streamState = newStreamState }
             , Cmd.none
             )
 
@@ -193,6 +204,21 @@ update msg model =
                 }
             )
 
+        Recv message ->
+            case D.decodeString messageDecoder message of
+                Err err ->
+                    ( model
+                    , log (D.errorToString err)
+                    )
+
+                Ok newMsg ->
+                    ( { model
+                        | lastMessage = Just newMsg
+                        , streamState = updateStateWithMessage model.streamState newMsg
+                      }
+                    , Cmd.none
+                    )
+
 
 httpErrToJsonErr : Http.Error -> D.Error
 httpErrToJsonErr httpErr =
@@ -222,6 +248,7 @@ view model =
     -- @TODO: clean up styles with layoutWith
     Element.layout
         [ Background.color black
+        , alpha 1.0
         , Font.family
             [ Font.external
                 { name = "Roboto"
@@ -238,7 +265,10 @@ view model =
             ]
             (case model.modelState of
                 Waiting ->
-                    viewInit
+                    viewInit model
+
+                Streaming ->
+                    viewStream model
 
                 Configuring mStats ->
                     case mStats of
@@ -265,7 +295,7 @@ view model =
                     viewFail err
 
                 Uploading pct ->
-                    viewProgress pct
+                    viewProgress model pct
 
                 Done stats ->
                     viewStats stats model.modelConfig model.disabledStats model.stagePage 1
@@ -460,7 +490,288 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
     ]
 
 
-viewInit =
+viewStream model =
+    let
+        showPlayerCharacterIcons player char =
+            row
+                [ centerX
+                , spacing 5
+                , moveUp 10
+                , Font.shadow
+                    { offset = ( 1, -1 )
+                    , color = black
+                    , blur = 1.5
+                    }
+                , Font.color <|
+                    case player.playerPort of
+                        1 ->
+                            red
+
+                        2 ->
+                            blue
+
+                        3 ->
+                            green
+
+                        4 ->
+                            goldenYellow
+
+                        _ ->
+                            white
+                ]
+                (List.repeat
+                    (Maybe.withDefault 0 player.startStocks)
+                    (text "◉")
+                )
+
+        showPlayerCharacter char =
+            image
+                [ centerX
+                ]
+                { src = charImgPath char
+                , description = ""
+                }
+
+        showPlayerPcts pct =
+            let
+                roundedText =
+                    String.fromInt << round <| pct
+            in
+            el
+                [ Font.color white
+                , onRight <|
+                    el
+                        [ scale 0.3
+                        , moveLeft 5
+                        , moveDown 4
+                        , behindContent <|
+                            el
+                                [ Font.color black
+                                , Font.heavy
+                                , scale 1.025
+                                ]
+                                (text "%")
+                        ]
+                        (text "%")
+                , behindContent <|
+                    el
+                        [ Font.color black
+                        , Font.heavy
+                        , scale 1.025
+                        ]
+                        (text roundedText)
+                ]
+                (text roundedText)
+
+        showPlayerInfo moveLR playerIdx =
+            let
+                pctElem =
+                    Array.get playerIdx model.streamState.currentPcts
+                        |> Maybe.map showPlayerPcts
+                        |> Maybe.withDefault none
+
+                winCountAttr =
+                    let
+                        scoreAttr =
+                            [ Background.color grey
+                            , Element.mouseOver
+                                [ Background.color white
+                                , Font.color black
+                                ]
+                            , Border.color grey
+                            , Border.rounded 6
+                            , padding 5
+                            , scale 2
+                            ]
+
+                        updateButton newSS logo =
+                            Input.button
+                                [ Background.color black
+                                , Font.color black
+                                , Element.mouseOver
+                                    [ Background.color black
+                                    , Font.color white
+                                    ]
+                                , Border.color black
+                                ]
+                                { onPress = Just (UpdateStream newSS)
+                                , label = text logo
+                                }
+                    in
+                    case playerIdx of
+                        0 ->
+                            onRight <|
+                                column
+                                    [ spacing 20
+                                    , moveUp 12
+                                    , moveRight 3
+                                    , centerX
+                                    ]
+                                    [ updateButton (updateCurrentWinsL model.streamState (\score -> score + 1)) "+"
+                                    , Input.button scoreAttr
+                                        { onPress =
+                                            Just <|
+                                                UpdateStream (updateCurrentWinsL model.streamState (always 0))
+                                        , label = text << String.fromInt <| model.streamState.currentWinsL
+                                        }
+                                    , updateButton (updateCurrentWinsL model.streamState (\score -> max 0 (score - 1))) "-"
+                                    ]
+
+                        1 ->
+                            onLeft <|
+                                column
+                                    [ spacing 20
+                                    , moveUp 12
+                                    , moveLeft 3
+                                    ]
+                                    [ updateButton (updateCurrentWinsR model.streamState (\score -> score + 1)) "+"
+                                    , Input.button
+                                        scoreAttr
+                                        { onPress =
+                                            Just <|
+                                                UpdateStream (updateCurrentWinsR model.streamState (always 0))
+                                        , label = text << String.fromInt <| model.streamState.currentWinsR
+                                        }
+                                    , updateButton (updateCurrentWinsR model.streamState (\score -> max 0 (score - 1))) "-"
+                                    ]
+
+                        _ ->
+                            above none
+            in
+            el
+                [ Background.color grey
+                , Border.rounded 6
+                , centerX
+                , centerY
+                , paddingXY 35 200
+                , above <|
+                    Input.text
+                        [ Background.color black
+                        , Border.color black
+                        , Element.focused [ Background.color black ]
+                        , Font.center
+                        , Font.extraBold
+                        , Font.color white
+                        , moveDown 20
+                        , winCountAttr
+                        ]
+                        { onChange =
+                            \str ->
+                                case playerIdx of
+                                    0 ->
+                                        UpdateStream (updateCurrentNameL model.streamState str)
+
+                                    1 ->
+                                        UpdateStream (updateCurrentNameR model.streamState str)
+
+                                    _ ->
+                                        UpdateStream model.streamState
+                        , text =
+                            case playerIdx of
+                                0 ->
+                                    model.streamState.currentNameL
+
+                                1 ->
+                                    model.streamState.currentNameR
+
+                                _ ->
+                                    ""
+                        , placeholder = Nothing
+                        , label = Input.labelHidden ""
+                        }
+                , below <|
+                    Maybe.withDefault none
+                        (Maybe.map2 showPlayerCharacterIcons
+                            (Array.get playerIdx model.streamState.players)
+                            (Array.get playerIdx model.streamState.currentChars)
+                        )
+                , moveLR
+                ]
+            <|
+                Maybe.withDefault none
+                    (Maybe.map showPlayerCharacter
+                        (Array.get playerIdx model.streamState.currentChars)
+                    )
+
+        greenScreen =
+            el [] none
+    in
+    [ row []
+        [ showPlayerInfo (moveLeft 190) 0
+        , column []
+            [ row
+                [ Background.color grey
+                , Border.rounded 6
+                , moveDown 300
+                , paddingXY 10 0
+                , spacing 10
+                ]
+                [ el [ Font.extraBold, Font.italic, Font.color white ] (text "The Sundaez Series")
+                , image
+                    [ Element.mouseOver
+                        [ Background.color cyan
+                        ]
+                    , padding 2
+                    , Border.rounded 5
+                    , Events.onClick <| Goto Waiting
+                    , centerX
+                    , centerY
+
+                    -- , onRight <|
+                    --     el
+                    --         [ Font.color white
+                    --         , scale 1.2
+                    --         , Font.italic
+                    --         , behindContent <|
+                    --             el
+                    --                 [ Font.color black
+                    --                 , Font.extraBold
+                    --                 , scale 1.025
+                    --                 ]
+                    --                 (text "The Sundaez Series")
+                    --         , centerX
+                    --         ]
+                    --         (text "The Sundaez Series")
+                    ]
+                    smashLogo
+                , el [ Font.extraBold, Font.italic, Font.color white ] (text "February 14, 2021")
+                ]
+            ]
+        , showPlayerInfo (moveRight 190) 1
+        ]
+
+    -- image
+    -- [ Element.mouseOver
+    --     [ Background.color cyan
+    --     ]
+    -- , padding 2
+    -- , Border.rounded 5
+    -- , Events.onClick <| Goto Waiting
+    -- , centerX
+    -- , centerY
+    -- , below <|
+    --     el
+    --         [ Font.color white
+    --         , scale 1.2
+    --         , Font.italic
+    --         , behindContent <|
+    --             el
+    --                 [ Font.color black
+    --                 , Font.extraBold
+    --                 , scale 1.025
+    --                 ]
+    --                 (text "The Sundaez Series")
+    --         , centerX
+    --         ]
+    --         (text "The Sundaez Series")
+    -- , onLeft (showPlayerInfo (moveLeft 375) 0)
+    -- , onRight (showPlayerInfo (moveRight 375) 1)
+    -- ]
+    -- smashLogo
+    ]
+
+
+viewInit model =
     [ row
         [ spacing 100
         , centerX
@@ -477,7 +788,22 @@ viewInit =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Stats")
+                    (text "Files")
+            ]
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Goto Streaming
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Stream")
             ]
             smashLogo
         , image
@@ -520,7 +846,22 @@ viewFail err =
                     [ Font.color white
                     , centerX
                     ]
-                    (text "Stats")
+                    (text "Files")
+            ]
+            smashLogo
+        , image
+            [ Element.mouseOver
+                [ Background.color cyan
+                ]
+            , padding 2
+            , Border.rounded 5
+            , Events.onClick <| Goto Streaming
+            , below <|
+                el
+                    [ Font.color white
+                    , centerX
+                    ]
+                    (text "Stream")
             ]
             smashLogo
         , image
@@ -716,7 +1057,7 @@ viewConfiguration modelCfg mStats =
     ]
 
 
-viewProgress pct =
+viewProgress model pct =
     if pct > 0 then
         [ el
             [ Font.color white
@@ -732,7 +1073,7 @@ viewProgress pct =
         ]
 
     else
-        viewInit
+        viewInit model
 
 
 getPlayerWinCount : Array.Array PlayerStat -> Int -> Int
@@ -1011,6 +1352,12 @@ renderSecondaries styles player =
 port setStorage : E.Value -> Cmd msg
 
 
+port log : String -> Cmd msg
+
+
+port messageReceiver : (String -> msg) -> Sub msg
+
+
 updateWithStorage : Msg -> Model -> ( Model, Cmd Msg )
 updateWithStorage msg oldModel =
     let
@@ -1038,6 +1385,12 @@ encodeModelState status =
         Waiting ->
             E.object
                 [ ( "name", E.string "Waiting" )
+                , ( "args", E.null )
+                ]
+
+        Streaming ->
+            E.object
+                [ ( "name", E.string "Streaming" )
                 , ( "args", E.null )
                 ]
 
@@ -1072,6 +1425,15 @@ encode model =
     E.object
         [ ( "modelState", encodeModelState model.modelState )
         , ( "modelConfig", statsConfigEncoder model.modelConfig )
+        , ( "streamState", streamStateEncoder model.streamState )
+        , ( "lastMessage"
+          , case model.lastMessage of
+                Nothing ->
+                    E.null
+
+                Just msg ->
+                    messageEncoder msg
+          )
         , ( "disabledStats", E.int model.disabledStats )
         , ( "stagePage", E.int model.stagePage )
         ]
@@ -1096,6 +1458,9 @@ preModelStateToState preModelState =
         "Waiting" ->
             D.succeed Waiting
 
+        "Streaming" ->
+            D.succeed Streaming
+
         "Configuring" ->
             D.field "args" (D.nullable statsDecoder)
                 |> D.andThen (Configuring >> D.succeed)
@@ -1110,13 +1475,15 @@ preModelStateToState preModelState =
 
 decode : D.Decoder Model
 decode =
-    D.map4 Model
+    D.map6 Model
         (D.field "modelState"
             (decodePreModelState
                 |> D.andThen preModelStateToState
             )
         )
         (D.field "modelConfig" statsConfigDecoder)
+        (D.field "streamState" streamStateDecoder)
+        (D.field "lastMessage" <| D.nullable messageDecoder)
         (D.field "disabledStats" D.int)
         (D.field "stagePage" D.int)
 
@@ -1158,27 +1525,39 @@ defaultStatsConfig =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Http.track "upload" GotProgress
+    messageReceiver Recv
 
 
 
+-- Http.track "upload" GotProgress
 -- main
 
 
 init : E.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case D.decodeValue decode flags of
-        Err _ ->
-            { modelState = Waiting
-            , modelConfig = defaultStatsConfig
-            , disabledStats = 0
-            , stagePage = 0
-            }
+    case D.decodeValue decode flags of
+        Err err ->
+            ( { modelState = Waiting
+              , modelConfig = defaultStatsConfig
+              , streamState =
+                    { players = Array.empty
+                    , endGames = []
+                    , currentPcts = Array.empty
+                    , currentChars = Array.empty
+                    , currentWinsL = 0
+                    , currentWinsR = 0
+                    , currentNameL = "Player 1"
+                    , currentNameR = "Player 2"
+                    }
+              , lastMessage = Nothing
+              , disabledStats = 0
+              , stagePage = 0
+              }
+            , log (D.errorToString err)
+            )
 
         Ok model ->
-            model
-    , Cmd.none
-    )
+            ( model, Cmd.none )
 
 
 main =

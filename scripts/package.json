@@ -1,22 +1,22 @@
 {
-  "name": "scripts",
-  "version": "1.0.0",
-  "description": "Where the old scripts live",
-  "author": "Carl J. Factora",
-  "license": "GPL-3.0",
-  "private": false,
-  "dependencies": {
-      "slp-parser-js": "^4.1.0",
-      "chalk": "^3.0.0",
-      "multispinner": "^0.2.1",
-      "node-wav-player": "^0.1.0",
-      "obs-websocket-js": "^4.0.1",
-      "ora": "^4.0.3",
-      "yargs": "^15.1.0",
-      "chokidar": "^3.3.1"
-  },
-  "scripts": {
-      "play": "node playback.js play -c ../config.json",
-      "record": "node playback.js record -c ../config.json"
-  }
+    "name": "scripts",
+    "version": "1.0.0",
+    "description": "Where the old scripts live",
+    "author": "Carl J. Factora",
+    "license": "GPL-3.0",
+    "private": false,
+    "dependencies": {
+        "slp-parser-js": "^4.1.0",
+        "chalk": "^3.0.0",
+        "multispinner": "^0.2.1",
+        "node-wav-player": "^0.1.0",
+        "obs-websocket-js": "^4.0.1",
+        "ora": "^4.0.3",
+        "yargs": "^15.1.0",
+        "chokidar": "^3.3.1"
+    },
+    "scripts": {
+        "play": "node playback.js play -c ../config.json",
+        "record": "node playback.js record -c ../config.json"
+    }
 }
