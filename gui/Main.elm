@@ -697,34 +697,47 @@ viewStream model =
             el [] none
     in
     [ row []
-        [ showPlayerInfo (moveLeft 375) 0
-        , image
-            [ Element.mouseOver
-                [ Background.color cyan
+        [ showPlayerInfo (moveLeft 190) 0
+        , column []
+            [ row
+                [ Background.color grey
+                , Border.rounded 6
+                , moveDown 300
+                , paddingXY 10 0
+                , spacing 10
                 ]
-            , padding 2
-            , Border.rounded 5
-            , Events.onClick <| Goto Waiting
-            , centerX
-            , centerY
-            , below <|
-                el
-                    [ Font.color white
-                    , scale 1.2
-                    , Font.italic
-                    , behindContent <|
-                        el
-                            [ Font.color black
-                            , Font.extraBold
-                            , scale 1.025
-                            ]
-                            (text "The Sundaez Series")
+                [ el [ Font.extraBold, Font.italic, Font.color white ] (text "The Sundaez Series")
+                , image
+                    [ Element.mouseOver
+                        [ Background.color cyan
+                        ]
+                    , padding 2
+                    , Border.rounded 5
+                    , Events.onClick <| Goto Waiting
                     , centerX
+                    , centerY
+
+                    -- , onRight <|
+                    --     el
+                    --         [ Font.color white
+                    --         , scale 1.2
+                    --         , Font.italic
+                    --         , behindContent <|
+                    --             el
+                    --                 [ Font.color black
+                    --                 , Font.extraBold
+                    --                 , scale 1.025
+                    --                 ]
+                    --                 (text "The Sundaez Series")
+                    --         , centerX
+                    --         ]
+                    --         (text "The Sundaez Series")
                     ]
-                    (text "The Sundaez Series")
+                    smashLogo
+                , el [ Font.extraBold, Font.italic, Font.color white ] (text "February 14, 2021")
+                ]
             ]
-            smashLogo
-        , showPlayerInfo (moveRight 375) 1
+        , showPlayerInfo (moveRight 190) 1
         ]
 
     -- image
