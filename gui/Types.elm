@@ -1,6 +1,7 @@
 module Types exposing
     ( CellValue(..)
     , Character
+    , Combo
     , FavoriteMove
     , Game
     , Player
@@ -25,6 +26,11 @@ type StatsConfigField
     | AvgKillPercentF
     | FavoriteMoveF
     | FavoriteKillMoveF
+    | ShortestStockF
+    | LongestStockF
+    | EarliestKillF
+    | LatestKillF
+    | LongestComboF
     | SetCountAndWinnerF
     | StagesF
 
@@ -39,6 +45,11 @@ type alias StatsConfig =
     , avgKillPercent : Bool
     , favoriteMove : Bool
     , favoriteKillMove : Bool
+    , shortestStock : Bool
+    , longestStock : Bool
+    , earliestKill : Bool
+    , latestKill : Bool
+    , longestCombo : Bool
     , setCountAndWinner : Bool
     , stages : Bool
     }
@@ -96,12 +107,23 @@ type alias PlayerStat =
     , favoriteMove : FavoriteMove
     , favoriteKillMove : FavoriteMove
     , wins : Int
+    , shortestStock : Maybe Float
+    , longestStock : Maybe Float
+    , earliestKill : Maybe Float
+    , latestKill : Maybe Float
+    , longestCombo : Combo
     }
 
 
 type alias FavoriteMove =
     { moveName : String
     , timesUsed : Int
+    }
+
+
+type alias Combo =
+    { damage : Float
+    , moveCount : Int
     }
 
 

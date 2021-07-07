@@ -86,6 +86,21 @@ toggleField field val statsCfg =
         FavoriteKillMoveF ->
             { statsCfg | favoriteKillMove = val }
 
+        ShortestStockF ->
+            { statsCfg | shortestStock = val }
+
+        LongestStockF ->
+            { statsCfg | longestStock = val }
+
+        EarliestKillF ->
+            { statsCfg | earliestKill = val }
+
+        LatestKillF ->
+            { statsCfg | latestKill = val }
+
+        LongestComboF ->
+            { statsCfg | longestCombo = val }
+
         SetCountAndWinnerF ->
             { statsCfg | setCountAndWinner = val }
 
@@ -287,7 +302,7 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
             getPlayerWinCount stats.playerStats 1
     in
     [ column
-        [ spacing <| 10 + disabledStats * 5
+        [ spacing <| 20 + disabledStats * 5
         , alpha alphaVal
         ]
         [ if modelCfg.setCountAndWinner then
@@ -381,7 +396,7 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
                         { src = charImgPath player0.character
                         , description = renderPlayerName player0
                         }
-                , spacing 15
+                , spacing 20
                 ]
                 [ centerX
                 , Font.italic
@@ -395,17 +410,22 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
                 , Font.center
                 , Font.bold
                 , Font.italic
-                , spacing 15
+                , spacing 20
                 , Events.onDoubleClick <| Configure (Just stats)
                 ]
                 []
                 [ Single .totalDamage "Total Damage"
                 , Single .avgKillPercent "Average Kill Percent"
+                , Single .shortestStock "Shortest Stock"
+                , Single .longestStock "Longest Stock"
+                , Single .earliestKill "Earliest Kill"
+                , Single .latestKill "Latest Kill"
                 , Single .avgDamagePerOpening "Damage / Opening"
                 , Single .avgOpeningsPerKill "Openings / Kill"
                 , Single .neutralWins "Neutral Wins"
                 , Single .counterHits "Counter Hits"
                 , Single .avgApm "APM"
+                , Single .longestCombo "Longest Combo"
                 , Single .favoriteMove "Favorite Move"
                 , Single .favoriteKillMove "Favorite Kill Move"
                 ]
@@ -441,7 +461,7 @@ viewStats stats modelCfg disabledStats stagePage alphaVal =
                         { src = charImgPath player1.character
                         , description = renderPlayerName player1
                         }
-                , spacing 15
+                , spacing 20
                 ]
                 [ centerX
                 , Font.italic
@@ -580,14 +600,40 @@ viewConfiguration modelCfg mStats =
             ]
             [ column [ spacing 10 ]
                 [ Input.checkbox []
-                    { onChange = Toggle TotalDamageF
+                    { onChange = Toggle ShortestStockF
                     , icon = Input.defaultCheckbox
-                    , checked = modelCfg.totalDamage
+                    , checked = modelCfg.shortestStock
                     , label =
                         Input.labelRight []
-                            (text "Total Damage")
+                            (text "Shortest Stock")
                     }
                 , Input.checkbox []
+                    { onChange = Toggle LongestStockF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.longestStock
+                    , label =
+                        Input.labelRight []
+                            (text "Longest Stock")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle EarliestKillF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.earliestKill
+                    , label =
+                        Input.labelRight []
+                            (text "Earliest Kill")
+                    }
+                , Input.checkbox []
+                    { onChange = Toggle LatestKillF
+                    , icon = Input.defaultCheckbox
+                    , checked = modelCfg.latestKill
+                    , label =
+                        Input.labelRight []
+                            (text "Latest Kill")
+                    }
+                ]
+            , column [ spacing 10 ]
+                [ Input.checkbox []
                     { onChange = Toggle NeutralWinsF
                     , icon = Input.defaultCheckbox
                     , checked = modelCfg.neutralWins
@@ -620,7 +666,7 @@ viewConfiguration modelCfg mStats =
                             (text "Favorite Kill Move")
                     }
                 ]
-            , column [ spacing 15 ]
+            , column [ spacing 10 ]
                 [ Input.checkbox []
                     { onChange = Toggle AvgOpeningsPerKillF
                     , icon = Input.defaultCheckbox
@@ -654,6 +700,27 @@ viewConfiguration modelCfg mStats =
                             (text "APM")
                     }
                 ]
+            ]
+        , row
+            [ spacing 50
+            , centerX
+            ]
+            [ Input.checkbox []
+                { onChange = Toggle TotalDamageF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.totalDamage
+                , label =
+                    Input.labelRight []
+                        (text "Total Damage")
+                }
+            , Input.checkbox []
+                { onChange = Toggle LongestComboF
+                , icon = Input.defaultCheckbox
+                , checked = modelCfg.stages
+                , label =
+                    Input.labelRight []
+                        (text "Longest Combo")
+                }
             ]
         , el
             [ Font.extraBold
@@ -766,11 +833,16 @@ listifyPlayerStat mStat =
         Just stat ->
             [ Single .totalDamage << String.fromInt << round <| stat.totalDamage
             , Single .avgKillPercent << handlePossibleZero <| stat.avgKillPercent
+            , Single .shortestStock << handlePossibleZero << Maybe.withDefault 0 <| stat.shortestStock
+            , Single .longestStock << handlePossibleZero << Maybe.withDefault 0 <| stat.longestStock
+            , Single .earliestKill << handlePossibleZero << Maybe.withDefault 0 <| stat.earliestKill
+            , Single .latestKill << handlePossibleZero << Maybe.withDefault 0 <| stat.latestKill
             , Single .avgDamagePerOpening << String.fromInt << round <| stat.avgDamagePerOpening
             , Single .avgOpeningsPerKill << handlePossibleZero <| stat.avgOpeningsPerKill
             , Single .neutralWins << String.fromInt <| stat.neutralWins
             , Single .counterHits << String.fromInt <| stat.counterHits
             , Single .avgApm << String.fromInt << round <| stat.avgApm
+            , Dub .longestCombo (String.fromInt << round <| stat.longestCombo.damage) (String.fromInt stat.longestCombo.moveCount)
             , Dub .favoriteMove stat.favoriteMove.moveName (String.fromInt stat.favoriteMove.timesUsed)
             , Dub .favoriteKillMove stat.favoriteKillMove.moveName (String.fromInt stat.favoriteKillMove.timesUsed)
             ]
@@ -1147,6 +1219,11 @@ defaultStatsConfig =
     , avgKillPercent = True
     , favoriteMove = True
     , favoriteKillMove = True
+    , shortestStock = False
+    , longestStock = True
+    , earliestKill = True
+    , latestKill = False
+    , longestCombo = True
     , setCountAndWinner = True
     , stages = True
     }
